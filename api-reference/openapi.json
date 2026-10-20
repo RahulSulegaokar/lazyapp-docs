@@ -23624,12 +23624,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/CatalogBatch"
-                    }
-                  }
+                  "$ref": "#/components/schemas/CatalogBatch"
                 }
               }
             }
@@ -23701,12 +23696,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/CatalogBatch"
-                    }
-                  }
+                  "$ref": "#/components/schemas/CatalogBatch"
                 }
               }
             }
