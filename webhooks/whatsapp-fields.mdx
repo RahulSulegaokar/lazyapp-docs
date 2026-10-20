@@ -1,0 +1,92 @@
+---
+title: "What Meta tells LazyApp"
+description: "Every WhatsApp webhook field Meta sends, what LazyApp does with it, and the event you receive."
+---
+
+Meta sends LazyApp a webhook for everything that happens on your WhatsApp number: messages, delivery receipts, calls, template reviews, account notices. You never receive Meta's raw webhooks. LazyApp verifies each one (`X-Hub-Signature-256`), stores it, updates your workspace, and sends you a cleaner, [signed](/webhooks/verifying) LazyApp event.
+
+This page maps each Meta field to that event, so you know nothing is lost in between.
+
+## Messages
+
+| Meta field / message type | What LazyApp does | You receive |
+| --- | --- | --- |
+| `messages`: `text`, `image`, `video`, `audio`, `document`, `sticker`, `location`, `contacts` | Stores the message in the inbox; downloads media | `message.received` |
+| `messages`: `button`, `interactive` (replies, lists, flow answers `nfm_reply`, call permission replies) | Stores the reply; records flow answers and call permission answers | `message.received`, `flow.response_received`, `call.permission_request` |
+| `messages`: `order` | Stores the cart in `content.order` | `message.received`, `commerce.order` |
+| `messages`: `reaction` | Stores the reaction | `message.received`, `reaction.received` |
+| `messages`: `system` (number or user id changed) | Updates the contact | `message.received`, `contact.updated` |
+| `messages`: `unsupported` | Stores it with Meta's error | `message.received` |
+| `messages`: `edit` (WhatsApp Business app numbers) | Replaces the text of the original message, keeps the old one | `message.edited` |
+| `messages`: `revoke` (WhatsApp Business app numbers) | Marks the original deleted | `message.deleted` |
+| `messages` in a group (`group_id`) | Stores it with `content.group_id` | `message.received` |
+| `messages`: voicemail (audio with a `wacid.` id) | Stores it as a voice note with `content.voicemail.call_id` | `message.received` |
+| `messages`: `statuses` | Moves the message to sent, delivered, read, played or failed; settles pricing | `message.sent`, `message.delivered`, `message.read`, `message.played`, `message.failed` |
+| `messages`: account-wide `errors` (for example `130429` rate limit) | Logs and forwards | `account.updated` (`event: ERROR`) |
+| `smb_message_echoes`, `message_echoes` | Stores replies sent from the WhatsApp Business app or another app | `message.echo` |
+| `history` | Imports up to six months of chat history when a WhatsApp Business app number connects | Nothing (bulk import) |
+| `smb_app_state_sync` | Syncs contacts from the WhatsApp Business app | `contact.updated` |
+| `user_preferences` | A customer stopped or resumed marketing messages: updates consent | `contact.opted_out`, `contact.opted_in` |
+
+## Calls
+
+| Meta field / event | What LazyApp does | You receive |
+| --- | --- | --- |
+| `calls`: `connect` | Creates the call, rings in the inbox, keeps the SDP offer | `call.received` |
+| `calls`: `terminate`, call `statuses` | Ends the call with its duration | `call.ended`, `call.failed` |
+| `calls`: `call_recording_available` | Downloads and keeps the recording | `call.recording_available` |
+| `calls`: `call_transcription_available` | Downloads and keeps the transcript | `call.transcript_available` |
+
+## Templates
+
+| Meta field | What LazyApp does | You receive |
+| --- | --- | --- |
+| `message_template_status_update` | Updates the template status and rejection reason | `template.pending`, `template.approved`, `template.rejected`, `template.paused`, `template.disabled` |
+| `template_category_update` | Updates the category, tells admins | `template.category_changed` |
+| `message_template_quality_update` | Updates the quality score | `template.quality_changed` |
+| `message_template_components_update` | Updates the stored text | `template.updated` |
+
+## Flows
+
+| Meta field | What LazyApp does | You receive |
+| --- | --- | --- |
+| `flows` | Updates the flow status, records endpoint alerts, tells admins about blocks | `flow.status_changed` |
+
+## Account and numbers
+
+| Meta field | What LazyApp does | You receive |
+| --- | --- | --- |
+| `phone_number_quality_update` | Updates quality and messaging limit | `phone_number.quality_changed` |
+| `phone_number_name_update` | Applies an approved display name | `phone_number.updated` |
+| `account_update` | Moves the connection on bans, restrictions, disconnects and reconnects | `account.updated`, plus `connection.*` when the status changes |
+| `account_review_update` | Applies Meta's review decision | `account.updated` |
+| `account_alerts` | Keeps the latest alert per type, tells owners and admins | `account.updated` |
+| `business_capability_update` | Updates the messaging limit on every number of the account | `account.updated` |
+| `security` | Records two-step PIN changes in the audit log, tells admins | `account.updated` |
+| `payment_configuration_update` | Keeps the payment configuration status (India and Brazil payments) | `account.updated` |
+| `partner_solutions` | Forwards Multi-Partner Solution changes | `account.updated` |
+| `business_username_update` | Records the username status | `account.updated` |
+
+## Groups
+
+| Meta field | What LazyApp does | You receive |
+| --- | --- | --- |
+| `group_lifecycle_update` | Fills in a new group's id and invite link, or marks it deleted | `group.updated` |
+| `group_participants_update` | Updates the participant count | `group.updated` |
+| `group_settings_update` | Updates subject and description | `group.updated` |
+| `group_status_update` | Marks a group suspended or active | `group.updated` |
+
+## Ads
+
+| Meta field | What LazyApp does | You receive |
+| --- | --- | --- |
+| `automatic_events` | Records the detected lead or purchase on the message | `conversion.detected` |
+
+## Why not send Meta's webhooks straight to you?
+
+Meta lets an app point a number's or account's webhooks at another URL. LazyApp does not offer that: the inbox, billing, automations and these events all depend on LazyApp receiving them. Every field above reaches you through your [webhook endpoints](/webhooks/overview), filtered by number and, for platforms, by customer.
+
+## Related
+
+- [Event reference](/webhooks/events)
+- [Verifying signatures](/webhooks/verifying)

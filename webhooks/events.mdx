@@ -17,11 +17,15 @@ Subscribe to what you handle by listing types in `subscribed_events`, or omit it
 | `message.played` | A voice note was played |
 | `message.failed` | Delivery failed. `error_message` carries the reason |
 | `message.deleted` | A coexistence revoke deleted a previously stored message. Payload is the original message plus `deleted_at` |
+| `message.edited` | A contact edited a message within 15 minutes (WhatsApp Business app numbers only). Payload is the updated message plus `previous_body`, `edited_at` and `edit_provider_message_id` |
+| `message.echo` | Someone replied from the WhatsApp Business app on a coexistence number. The message never passed through the API, so this is the only way you hear about it. Imported chat history is not sent |
 | `reaction.received` | Someone added or removed an emoji reaction. Also still arrives as `message.received` with `type: reaction` |
 | `conversation.started` | First time this contact opens a thread on a connection (not on reopen) |
 | `address.received` | A contact submitted an India [address form](/sending/interactive-messages#address-messages-india). `data.address.values` has the fields |
 
 `data.message` includes `conversation_id` (`cnv_…`), `metadata` you attached when sending, the `request_id` of the originating API call, `provider_message_id`, and `contact.bsuid` when Meta provides one. Messages sent to or received in a [group](/guides/groups) carry `group` (`uuid`, `provider_group_id`) and no `conversation_id`. The first message from someone who tapped a Click-to-WhatsApp ad carries the ad in `content.referral` (see [Ad welcome messages](/guides/ad-welcome-messages)).
+
+`content` carries the structured parts: `content.group_id` when the message was sent in a WhatsApp group, `content.voicemail.call_id` when it is a voicemail left after a missed call, and `content.automatic_events` once Meta detects a lead or purchase in a chat that began from an ad.
 
 <Note>
   These do not arrive in order. A `message.read` may land before the `message.delivered`
@@ -39,6 +43,8 @@ Subscribe to what you handle by listing types in `subscribed_events`, or omit it
 | `template.disabled` | Disabled after repeated problems |
 | `template.category_changed` | Meta re-categorised it, which changes what you pay |
 | `template.deleted` | Deleted in WhatsApp Manager, found on the next sync |
+| `template.quality_changed` | Meta's quality score moved (`GREEN`, `YELLOW`, `RED`). `previous_quality_score` is included |
+| `template.updated` | The template's text was edited in WhatsApp Manager. `body_text` and `footer_text` hold the new copy |
 
 ## Marketing
 
@@ -87,6 +93,39 @@ See [Group chats](/guides/groups).
 | `connection.connected` | A WhatsApp account finished connecting |
 | `connection.attention_required` | Action needed, e.g. a credential or verification problem |
 | `connection.disconnected` | The connection stopped working |
+| `account.updated` | Meta told LazyApp something about the WhatsApp account. See below |
+
+### `account.updated`
+
+One event for every account-level notice Meta sends, so you do not have to subscribe to a dozen. `data.account` holds:
+
+| Field | Meaning |
+| --- | --- |
+| `field` | The Meta webhook field it came from: `account_update`, `account_review_update`, `account_alerts`, `business_capability_update`, `security`, `payment_configuration_update`, `partner_solutions`, `business_username_update`, or `messages` for an account-wide sending error |
+| `event` | The headline, in capitals: for example `ACCOUNT_RESTRICTION`, `APPROVED`, `INCREASED_CAPABILITIES_ELIGIBILITY_DEFERRED`, `PIN_CHANGED`, `NEEDS_CONNECTING` or `ERROR` |
+| `details` | Meta's own value, unchanged |
+| `connection` | The connection it applies to, as in `connection.*` events |
+
+Bans, restrictions and reconnections also move the connection's status, so you get the matching `connection.*` event as well.
+
+```json
+{
+  "id": "evt_…",
+  "type": "account.updated",
+  "created_at": "2026-10-20T10:00:00+00:00",
+  "data": {
+    "account": {
+      "field": "account_alerts",
+      "event": "INCREASED_CAPABILITIES_ELIGIBILITY_DEFERRED",
+      "details": {
+        "entity_type": "BUSINESS",
+        "alert_info": { "alert_severity": "WARNING", "alert_status": "ACTIVE", "alert_type": "INCREASED_CAPABILITIES_ELIGIBILITY_DEFERRED" }
+      },
+      "connection": { "uuid": "…", "phone_number_id": "106540352242922", "status": "active" }
+    }
+  }
+}
+```
 
 ## Flows
 
@@ -95,6 +134,7 @@ See [Group chats](/guides/groups).
 | `flow.published` | A flow became sendable |
 | `flow.failed` | Publishing failed, or the data endpoint is unhealthy |
 | `flow.response_received` | A user completed a flow. `data` carries the submission |
+| `flow.status_changed` | Meta changed the flow's status (for example `blocked` or `throttled`) or raised an endpoint health alert. `event` is Meta's (`FLOW_STATUS_CHANGE`, `ENDPOINT_ERROR_RATE`, …) and `details` its full value |
 
 ## Workflows
 
@@ -120,8 +160,16 @@ See [Group chats](/guides/groups).
 | `call.ended` | A call finished (answered hangup, no-answer, rejected). Includes duration when known |
 | `call.failed` | Meta reported a hard `FAILED` status before or during the call |
 | `call.permission_request` | The contact accepted or rejected a call-permission request (`response`: `accept` / `reject`) |
+| `call.recording_available` | The recording of a call you asked to record is stored. Fetch it from [`GET /v1/calls/{uuid}/recording`](/guides/calling#recordings-and-transcripts) |
+| `call.transcript_available` | The transcript is ready. `transcript.text` and `transcript_segments` are in the payload |
 
 Only fires on numbers where Meta has enabled calling. Check [capabilities](/concepts/capabilities).
+
+## Ads
+
+| Event | When |
+| --- | --- |
+| `conversion.detected` | Meta detected a lead (`LeadSubmitted`) or purchase (`Purchase`) in a chat that started from a Click-to-WhatsApp ad. Purchases carry `currency` and `amount` |
 
 ## Platform
 

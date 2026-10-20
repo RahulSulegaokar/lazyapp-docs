@@ -33,16 +33,19 @@ curl https://lazyapp.in/v1/capabilities \
 | [`GET /v1/flows`](/api-reference/flows/list-flows) | List (cursor-paginated; filter `status`) |
 | [`POST /v1/flows`](/api-reference/flows/create-a-flow) | Create draft + upload Flow JSON to Meta |
 | [`GET /v1/flows/{flow}`](/api-reference/flows/retrieve-a-flow) | One flow by LazyApp `uuid` or Meta `provider_flow_id` |
+| [`PUT /v1/flows/{flow}`](#update-or-delete-a-draft) | Replace a draft's name, categories, Flow JSON or endpoint |
+| [`DELETE /v1/flows/{flow}`](#update-or-delete-a-draft) | Delete a draft at Meta and in LazyApp |
 | [`POST /v1/flows/{flow}/publish`](/api-reference/flows/publish-a-flow) | Make sendable |
 | [`POST /v1/flows/{flow}/deprecate`](/api-reference/flows/deprecate-a-flow) | Stop new sends; open sessions continue |
-| [`GET /v1/flows/{flow}/endpoint-health`](/api-reference/flows/check-flow-endpoint-health) | Probe your data endpoint |
+| [`GET /v1/flows/{flow}/health`](#can-it-be-sent) | Ask Meta whether the flow can be sent, and what blocks it |
+| [`GET /v1/flows/{flow}/endpoint-health`](/api-reference/flows/check-flow-endpoint-health) | Probe the data endpoint |
 | [`GET /v1/flows/{flow}/responses`](/api-reference/flows/list-flow-responses) | Completion payloads |
-| Send Flow | [`POST /v1/messages`](/sending/messages) with `interactive.type: flow` |
+| [`POST /v1/flows/copy`](#copy-flows-from-another-number) | Copy flows from another number's WhatsApp Business account |
+| Send Flow | [`POST /v1/messages`](/sending/messages) with `interactive.type: flow`, or a template with a flow button |
 | [`GET /v1/flows/starters`](/guides/flows#starters) / `POST` | List and materialise starter drafts |
 | [`POST /v1/flows/{flow}/duplicate`](/guides/flows#duplicate) | Clone into a new draft |
-| Update published Flow JSON in place | **Not allowed** — duplicate, then publish |
-| Managed / hosted data-endpoint encryption | **Not built** — you host `data_endpoint_uri` |
-| Zernio `POST /v1/whatsapp/flows/send` | Use messages interactive instead |
+| Update published Flow JSON in place | **Not allowed** by Meta. Duplicate, then publish |
+| Data endpoint with encryption | LazyApp hosts the endpoint and handles the encryption. See [data endpoint](#data-endpoint) |
 
 ## Lifecycle
 
@@ -104,8 +107,8 @@ curl -X POST https://lazyapp.in/v1/flows \
 | `name` | Yes | Max 200 characters |
 | `categories` | Yes | At least one Meta Flow category string (for example `LEAD_GENERATION`, `APPOINTMENT_BOOKING`) |
 | `flow_json` | Yes | Object or JSON string — must include `screens`, unique screen `id`s, and at least one `terminal: true` screen |
-| `data_endpoint_uri` | No | **HTTPS** URL for dynamic Flows |
-| `public_key` | No | Encryption key material when Meta requires it for your endpoint |
+| `data_endpoint_uri` | No | **HTTPS** URL of your server for dynamic Flows. LazyApp forwards decrypted requests to it |
+| `public_key` | No | Accepted for compatibility and ignored: LazyApp manages the number's key |
 
 Invalid Flow JSON returns `422` with field errors before Meta is called. On success the flow is created at Meta and stored as `draft` with a `provider_flow_id`.
 
@@ -134,11 +137,53 @@ curl -X POST https://lazyapp.in/v1/flows/9f8b1c2d-4e5f-4a6b-8c7d-0e1f2a3b4c5d/pu
   -H "Idempotency-Key: flow-lead-1-publish"
 ```
 
-Publishing emits `flow.published` (or `flow.failed` on Meta error). Deprecate with `POST …/deprecate` when you want to stop attaching the flow to new messages.
+Publishing emits `flow.published` (or `flow.failed` on Meta error). Deprecate with `POST …/deprecate` when you want to stop attaching the flow to new messages. If Meta later throttles or blocks the flow because its endpoint is failing, you get `flow.status_changed`.
 
-## Data endpoint health
+## Update or delete a draft
 
-Dynamic Flows need a reachable HTTPS endpoint. Probe it:
+`PUT /v1/flows/{flow}` takes the same body as create and replaces the draft. A published flow answers `422` with `code: flow_not_editable`.
+
+`DELETE /v1/flows/{flow}` deletes a draft at Meta and in LazyApp, and answers `204`. A published flow answers `422` with `code: flow_not_deletable`: deprecate it instead.
+
+## Can it be sent?
+
+Sending a flow depends on the flow, your WhatsApp Business account, your Meta business and LazyApp's app. Meta rates each one and LazyApp asks for your number specifically:
+
+```bash
+curl https://lazyapp.in/v1/flows/9f8b1c2d-4e5f-4a6b-8c7d-0e1f2a3b4c5d/health \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+```json
+{
+  "can_send_message": "BLOCKED",
+  "problems": ["endpoint_uri: You need to set the endpoint URI before you can send or publish a flow."],
+  "notes": [],
+  "entities": [ { "entity_type": "FLOW", "can_send_message": "BLOCKED", "errors": [ … ] } ]
+}
+```
+
+`can_send_message` is `AVAILABLE`, `LIMITED` (sendable, see `notes`) or `BLOCKED` (see `problems`). The result is kept on the flow as `can_send_message`. In the console, use **Check it can be sent** on a flow.
+
+## Copy flows from another number
+
+If your workspace has numbers on two WhatsApp Business accounts owned by the same Meta business, copy the flows from one into the workspace's main account:
+
+```bash
+curl -X POST https://lazyapp.in/v1/flows/copy \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" -H "Content-Type: application/json" \
+  -d '{ "source_connection_uuid": "…", "flow_names": ["appointment-booking"] }'
+```
+
+Leave out `flow_names` to copy every flow (Meta copies up to 100 per request). Copies keep their names and status; a name that already exists is reported under `failed` with Meta's reason. In the console: **Flows → ⋯ → Copy flows from another number**.
+
+## Data endpoint
+
+Meta calls a data endpoint for flows that load data while the customer fills them in. That traffic is encrypted with a key pair registered on your number. LazyApp is always the endpoint Meta calls: it keeps the key, decrypts each request and either answers from the Flow JSON (flows without a `data_endpoint_uri`) or forwards plain JSON to your `data_endpoint_uri`, signed with `X-LazyApp-Signature: sha256=…` using the flow's signing secret. Your reply is encrypted back for Meta. Set up the number's key once under **Flows → Secure flow connection**.
+
+### Data endpoint health
+
+Probe it the way Meta does:
 
 ```bash
 curl https://lazyapp.in/v1/flows/9f8b1c2d-4e5f-4a6b-8c7d-0e1f2a3b4c5d/endpoint-health \
@@ -155,7 +200,7 @@ curl https://lazyapp.in/v1/flows/9f8b1c2d-4e5f-4a6b-8c7d-0e1f2a3b4c5d/endpoint-h
 }
 ```
 
-LazyApp posts a ping (`action: ping`) to your URI and records the result on the flow. Meta still calls your endpoint for live data exchange — LazyApp does **not** host or encrypt that traffic for you.
+LazyApp sends an encrypted, signed `ping` to its own hosted endpoint, exactly as Meta does, and records the result on the flow.
 
 ## Send a Flow message
 
@@ -235,13 +280,13 @@ Prefer webhooks for live capture; list + console CSV export are for backfill and
 | `/v1/whatsapp/flows/*` | Flat `/v1/flows/*` |
 | `POST …/flows/send` | [`POST /v1/messages`](/sending/messages) interactive |
 | Flow JSON / versions / preview as separate public routes | Create + show (`flow_json` on retrieve); versioning via console clone |
-| Managed data-endpoint hosting | Customer-hosted `data_endpoint_uri` only |
+| Managed data-endpoint hosting | LazyApp hosts and encrypts; your `data_endpoint_uri` gets plain signed JSON |
 | `accountId` on every call | Workspace from API key |
 
 ## Related
 
 - [Capabilities](/concepts/capabilities) — `flows` flags  
 - [Messages](/sending/messages) — interactive types and the 24-hour window  
-- [Webhooks — Flows](/webhooks/events#flows) — `flow.published`, `flow.failed`, `flow.response_received`  
+- [Webhooks — Flows](/webhooks/events#flows) — `flow.published`, `flow.failed`, `flow.response_received`, `flow.status_changed`  
 - [Automation packs](/sending/automation-packs) — seed Flows for a vertical  
 - [Pending gaps vs Zernio](/pending-gaps-zernio) — hosted endpoint backlog  
