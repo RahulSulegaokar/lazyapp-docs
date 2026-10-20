@@ -17,6 +17,7 @@ Every API key carries scopes. A call outside them returns `403`.
 | `customers:write` | Manage platform customers, setup links and embed tokens |
 | `customers:act` | Act on behalf of a platform customer without managing them |
 | `billing:read` | Read billing and usage |
+| `connections:write` | Change WhatsApp numbers and their account: register, two-step PIN, display name, blue tick, QR codes, conversation starters, opt-in links, adding numbers |
 
 ## By endpoint group
 
@@ -29,6 +30,8 @@ Every API key carries scopes. A call outside them returns `403`.
 | Broadcasts | `messages:read` | `messages:send` |
 | Workflows | `messages:read` | `messages:send` |
 | Capabilities | `messages:read` | — |
+| Connections (numbers, health, blue tick, QR codes, opt-in links) | `messages:read` | `connections:write` |
+| Connections (business profile text, blocked users) | `messages:read` | `messages:send` |
 | Templates | `templates:read` | `templates:write` |
 | Event mappings / automation packs | `templates:read` | `templates:write` |
 | Media | `messages:read` | `media:write` |

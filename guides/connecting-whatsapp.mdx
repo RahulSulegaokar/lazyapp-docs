@@ -48,6 +48,22 @@ Subscribe to:
 
 There is no public `GET /v1/connect/{platform}` OAuth starter for Twitter/Facebook/etc. — that Zernio-style surface does not apply here. There is also no public `POST /v1/connect/whatsapp/credentials` — use Embedded Signup or setup links.
 
+### Details filled in for you
+
+When your workspace has a name, a website and a time zone (and you have a billing email or a login email), LazyApp sends them to Meta so the business portfolio screen arrives filled in. Meta only uses them when all four are present; the person signing up can still edit every field.
+
+### Finishing without a phone number
+
+A business can share or create a WhatsApp account in Meta's window and skip adding a number. LazyApp still connects the account and then asks which number to send from: pick one already on the account, or add a new one (country code, number, and the name customers will see). LazyApp holds the account for one hour while you choose. A new number then needs a verification code and registration; see [Phone numbers](/guides/phone-numbers#verify-and-register-a-number).
+
+### When Meta's window closes early
+
+If the person closes Meta's window, LazyApp shows which step they stopped at (choosing the business, the WhatsApp account, the number, the code or the permissions) and what to do next. If Meta showed an error, LazyApp repeats Meta's message with the error code and session id to quote to support.
+
+<Note>
+While Meta is still reviewing LazyApp's app (App Review for `whatsapp_business_management` and `whatsapp_business_messaging`), Embedded Signup only completes for businesses LazyApp has added as testers. Until then, connect with **Paste details from Meta** using your own system-user token.
+</Note>
+
 ## WhatsApp Business app coexistence
 
 Businesses already on the **WhatsApp Business app** can connect the same number to Cloud API without giving up the app. During Embedded Signup, Meta offers **Connect existing WhatsApp Business app account**. LazyApp marks the connection as coexistence and requests contact and history sync from Meta.
@@ -65,7 +81,8 @@ When coexistence is active:
 
 | Feature | Coexistence |
 | --- | --- |
-| Throughput | Capped at about 20 messages per second |
+| Throughput | Fixed at 20 messages per second |
+| Deregistering | Not allowed while the app still uses the number |
 | Group chats (app-side) | App groups are not visible via API |
 | Groups API | Not supported on coexistence — use a Cloud-API-only number; see [Group chats](/guides/groups) |
 | Voice/video calls via API | Not supported |

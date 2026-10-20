@@ -1,113 +1,187 @@
 ---
 title: "Phone numbers"
-description: "Connect your own WhatsApp number, monitor quality and limits, and recover when Meta disconnects."
+description: "List your numbers, check whether they can send, register and verify them, change the display name, apply for the blue tick and add more numbers to the same WhatsApp account."
 ---
 
-A WhatsApp number is a normal phone line with WhatsApp Cloud API enabled on your WABA. LazyApp does **not** sell or port numbers — you connect a number you already control through [Embedded Signup](/guides/connecting-whatsapp), or claim a shared **test** sandbox in the console.
+A WhatsApp number is a normal phone line with the WhatsApp Cloud API turned on. LazyApp does **not** sell or port numbers: you connect a number you control through [Embedded Signup](/guides/connecting-whatsapp), or claim the shared **test** sandbox in the console. Once a number is connected, everything on this page works from the console (**Connections → Settings** on a number) and from the API.
 
-There is no Zernio-style number shop, KYC API, or `GET /v1/whatsapp/number-info`. This page covers what LazyApp actually exposes.
+Every endpoint takes the connection `uuid` from [`GET /v1/connections`](/api-reference/connections/list-connections). Reads need `messages:read`. Changes need [`connections:write`](/reference/scopes), so a key that only sends messages cannot deregister a number or rename the business.
 
-## How you get a number
+## List and inspect numbers
 
-| Path | Mode | Notes |
+```bash
+curl https://lazyapp.in/v1/connections \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+```json
+{
+  "data": [
+    {
+      "uuid": "6f1c2b0e-8d3a-4c55-9e0f-2a1b3c4d5e6f",
+      "phone_number_id": "106540352242922",
+      "display_phone_number": "+919812345670",
+      "verified_name": "Acme",
+      "status": "active",
+      "is_default": true,
+      "quality_rating": "GREEN",
+      "messaging_limit": "TIER_2K",
+      "throughput_level": "STANDARD",
+      "registration_status": "registered",
+      "two_step_pin_set": true,
+      "coexistence": false
+    }
+  ]
+}
+```
+
+The list reads LazyApp's stored copy and never calls Meta, so it is cheap to poll. [`GET /v1/connections/{uuid}`](/api-reference/connections/get-a-connection) adds a `live` block from Meta (display name review, blue tick, phone status, account time zone), cached for five minutes. Pass `?refresh=1` to ask Meta again.
+
+## Can this number send right now?
+
+[`GET /v1/connections/{uuid}/health`](/api-reference/connections/check-sending-health) returns Meta's own answer for everything involved in a send: the number, its WhatsApp account, your business portfolio and LazyApp's Meta app.
+
+```json
+{
+  "can_send_message": "LIMITED",
+  "entities": [
+    {
+      "entity_type": "PHONE_NUMBER",
+      "can_send_message": "LIMITED",
+      "additional_info": [
+        "Your display name has not been approved yet. Your message limit will increase after the display name is approved."
+      ],
+      "errors": []
+    }
+  ]
+}
+```
+
+| `can_send_message` | Meaning |
+| --- | --- |
+| `AVAILABLE` | Everything checks out. |
+| `LIMITED` | Sending works, with a limit. `additional_info` says why. |
+| `BLOCKED` | Meta refuses sends. Each blocked node has `errors` with Meta's `possible_solution`. |
+
+Check health when sends start failing or a customer says messages stopped. Policy restrictions are explained, and can be appealed, in Meta's **Business Support Home**; there is no API for appeals.
+
+## Limits, quality and speed
+
+| Field | What it means |
+| --- | --- |
+| `messaging_limit` | How many different customers you can start conversations with in any 24 hours. Replies inside a customer's 24-hour window do not count. Since October 2025 the limit belongs to your business portfolio, so every number in it shares it. |
+| `quality_rating` | `GREEN`, `YELLOW` or `RED`, from how customers reacted over the last 7 days. |
+| `throughput_level` | `STANDARD` is up to 80 messages a second, `HIGH` up to 1,000. A number also used in the WhatsApp Business app is fixed at 20. |
+
+New portfolios start at 250. To reach 2,000, verify your business in Meta Business Suite, or send 2,000 high-quality template messages to different customers within 30 days. After that, Meta raises the limit automatically (within about 6 hours) when you use at least half of it over 7 days with good quality. The 1,000-a-second speed comes automatically to numbers on an unlimited portfolio that message 100,000 customers a day with at least medium quality.
+
+Prefer webhooks to polling: `phone_number.quality_changed` and `connection.attention_required` fire when these change. See [Event reference](/webhooks/events).
+
+## Verify and register a number
+
+Embedded Signup verifies and registers the number for you. You need these calls when you [add a number to an account](#more-numbers-on-the-same-account), move a number from another provider, change the display name, or Meta deregisters a number.
+
+```bash
+# 1. Meta texts (or calls) the number a 6-digit code
+curl -X POST https://lazyapp.in/v1/connections/{uuid}/request-code \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"code_method": "SMS"}'
+
+# 2. Submit it (123-456 and 123456 both work)
+curl -X POST https://lazyapp.in/v1/connections/{uuid}/verify-code \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"code": "123456"}'
+
+# 3. Register with the two-step PIN (a new number takes this as its PIN)
+curl -X POST https://lazyapp.in/v1/connections/{uuid}/register \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"pin": "212834"}'
+```
+
+| Endpoint | Use it to |
+| --- | --- |
+| `POST …/two-step-pin` | Change the 6-digit PIN. There is no way to turn two-step verification off. |
+| `POST …/deregister` | Stop the number on the Cloud API until you register it again. Not allowed for numbers also used in the WhatsApp Business app. |
+
+Meta allows 10 register or deregister calls per number in 72 hours. The eleventh returns `422` with `meta.code: 133016` and blocks the number for 72 hours, so do not retry registration in a loop.
+
+## Display name
+
+```bash
+curl -X POST https://lazyapp.in/v1/connections/{uuid}/display-name \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"display_name": "Acme Retail"}'
+```
+
+This answers `202`: Meta reviews the name, and customers keep seeing the old one until it is approved. Watch `live.requested_display_name_status` on the connection or the `phone_number.updated` webhook. Once approved, **register the number again within 14 days** (same PIN) or the change lapses. Meta allows 10 changes in 30 days. A number with the blue tick must ask Meta support instead.
+
+The profile photo, about text, address, email, websites and category live on the [business profile](/api-reference/connections/retrieve-business-profile); upload a photo with `POST …/business-profile/photo` (JPG or PNG, at least 192 × 192 pixels, up to 5 MB).
+
+## The blue tick (Official Business Account)
+
+A blue tick shows customers you are the real business and lets people find you in WhatsApp search. Meta decides; you apply.
+
+[`GET …/official-business-account`](/api-reference/connections/get-blue-tick-status) returns Meta's status and a checklist of what Meta requires: a verified business, a two-step PIN, an approved display name, 30 days on the platform, and not being a WhatsApp Business app or test number.
+
+```bash
+curl -X POST https://lazyapp.in/v1/connections/{uuid}/official-business-account \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "business_website_url": "https://acme.example",
+    "primary_country_of_operation": "India",
+    "supporting_links": [
+      "https://news.example/acme",
+      "https://reviews.example/acme",
+      "https://directory.example/acme",
+      "https://press.example/acme-launch",
+      "https://magazine.example/acme"
+    ]
+  }'
+```
+
+Supporting links are optional, but when you send them Meta wants 5 to 10 independent pages about your business. If Meta says no, you can apply again after 30 days.
+
+## More numbers on the same account
+
+Embedded Signup returns one number, but a WhatsApp account can hold several. [`GET …/account`](/api-reference/connections/get-the-whatsapp-account) lists every number on it with `connected` showing whether it is already in your workspace.
+
+- **Connect one you already have:** `POST …/account/phone-numbers/{phone_number_id}/connect`. No Facebook login needed; LazyApp reuses the access it has.
+- **Add a new one:** `POST …/account/phone-numbers` with `country_code`, `phone_number` and the `display_name` customers will see. The new connection starts as `phone_registration_pending`; then [verify and register](#verify-and-register-a-number) it.
+
+New portfolios can register 2 numbers; Meta raises that to 20 once the business is verified or reaches the 2,000 limit.
+
+`PATCH …/account` renames the account (only you see the name, in WhatsApp Manager) or sets its time zone with Meta's numeric `timezone_id` (for example `71` is `Asia/Kolkata`). Meta does not allow a time zone change once a partner credit line pays for the account.
+
+## When Meta refuses
+
+Every Meta refusal comes back in the same shape, with a sentence you can show to people and Meta's own code for logs:
+
+```json
+{
+  "code": "meta_rejected",
+  "message": "This number was registered or deregistered too many times. Meta blocks further attempts for 72 hours.",
+  "meta": { "code": 133016, "message": "(#133016) Registration or Deregistration failed…", "fbtrace_id": "AXsgnV2Cm3ZMGF3dF_cfYIn" }
+}
+```
+
+| Status | `code` | What to do |
 | --- | --- | --- |
-| **Embedded Signup** | `live` | Your (or your customer's) WABA + number via console or [setup link](/platform/setup-links) |
-| **Sandbox claim** | `test` only | Shared LazyApp pool number in the console — not for production |
+| `422` | `meta_rejected` | Fix the request; retrying the same thing fails the same way. |
+| `422` | `meta_permission_missing` | Reconnect the number and approve every permission Meta asks for. |
+| `409` | `connection_token_expired` | Reconnect the number. |
+| `429` | `meta_rate_limited` | Meta is limiting changes to this account. Back off for a few minutes. |
+| `503` | `meta_unavailable` | Meta had a temporary problem. Retry later. |
 
-LazyApp does not provision carrier lines. Numbers connected through Embedded Signup have **no** LazyApp SMS/voice SKU behind them — WhatsApp only.
-
-See [Connecting WhatsApp](/guides/connecting-whatsapp) for coexistence, reconnect, and platform onboarding.
-
-## Monitor quality and limits
-
-### API: cached snapshot
-
-[`GET /v1/capabilities`](/concepts/capabilities) returns each connection's last known Meta health fields plus feature flags:
-
-```bash
-curl https://lazyapp.in/v1/capabilities \
-  -H "Authorization: Bearer $LAZYAPP_API_KEY"
-```
-
-| Field | Meaning |
-| --- | --- |
-| `connection_uuid` | LazyApp connection id |
-| `phone_number_id` | Meta phone number id (use in the [Meta proxy](/migrating/from-cloud-api)) |
-| `display_phone_number` | E.164 display |
-| `quality_rating` | `GREEN`, `YELLOW`, or `RED` |
-| `messaging_limit_tier` | Meta tier (for example `TIER_250`, `TIER_1K`) |
-| `capabilities` | What this number can do today |
-
-Values are updated from Meta webhooks and periodic syncs — not a live Graph read on every request.
-
-### Webhooks (preferred)
-
-Subscribe to connection and number events instead of polling:
-
-| Event | When |
-| --- | --- |
-| `connection.connected` | Number ready to send |
-| `connection.attention_required` | Meta needs action (review, credentials, registration) |
-| `connection.disconnected` | Channel stopped working — prompt reconnect |
-| `phone_number.quality_changed` | Quality rating moved |
-| `phone_number.updated` | Display name, tier, or config changed |
-
-See [Event reference](/webhooks/events). For platform customers, deliveries include the `customer` envelope.
-
-### Live Meta insights
-
-[`GET /v1/connections/{connection_uuid}/insights`](/api-reference/connections/connection-insights) loads a live Meta read (quality, verified name, throughput, WABA review status, business profile fields). Responses are cached for about five minutes. Scope `messages:read`.
-
-```bash
-curl https://lazyapp.in/v1/connections/{connection_uuid}/insights \
-  -H "Authorization: Bearer $LAZYAPP_API_KEY"
-```
-
-The **Connections** console page uses the same underlying fetch.
-
-<Warning>
-Do not treat `GET /v1/capabilities` alone as a liveness probe after a coexistence disconnect. Prefer `connection.disconnected` and, when in doubt, call insights or attempt a send.
-</Warning>
-
-## Verification and registration
-
-**Embedded Signup** verifies the number inside Meta's flow — there is no public OTP API for normal onboarding.
-
-Edge cases handled in the **console** (not `/v1` today):
-
-| Situation | Console action |
-| --- | --- |
-| Meta asks for SMS/voice verification on an existing line | Request verification code, then submit code |
-| Cloud API registration failed because the number has two-step PIN (Meta error 133005) | **Register** with the correct PIN |
-| Rotate two-step PIN | **Set two-step PIN** |
-| Deregister from Cloud API | **Deregister** |
-
-If sends fail with a generic permission error while the connection still looks active, registration with the correct PIN is a common fix — the PIN is used for the Meta call only and is not stored by LazyApp.
-
-## Multi-number workspaces
-
-When a workspace has more than one connection:
-
-- [`GET /v1/capabilities`](/concepts/capabilities) lists all numbers; `is_default` marks the default send target.
-- [`POST /v1/broadcasts`](/sending/broadcasts) accepts optional `whatsapp_connection_id` (internal id).
-- Scoped API keys can restrict which `phone_number_id` values a key may use.
-
-Platform integrators map customers via [setup links](/platform/setup-links) and `customer.connected` webhooks — not per-number `accountId` fields.
-
-## What we skip (Zernio-style)
-
-| Zernio | LazyApp |
-| --- | --- |
-| Buy / port numbers via API | Embedded Signup only |
-| KYC / white-label KYC links | Not sold |
-| `GET /v1/whatsapp/number-info` live read | `GET /v1/capabilities` (cached) + webhooks |
-| `GET /v1/accounts/{id}/health` | `connection.*` webhooks + capabilities |
-| `POST …/whatsapp/register` via API | Console registration actions |
-| SMS / voice on the same purchased line | WhatsApp only |
+Quote `meta.fbtrace_id` if you contact support.
 
 ## Related
 
-- [Connecting WhatsApp](/guides/connecting-whatsapp) — connect and reconnect
-- [Capabilities](/concepts/capabilities) — limits and feature flags
-- [Webhooks](/webhooks/events) — `connection.*` and `phone_number.*`
-- [Pending gaps vs Zernio](/pending-gaps-zernio) — backlog including live number-info API
+- [Connecting WhatsApp](/guides/connecting-whatsapp): connect, reconnect and coexistence
+- [QR codes, opt-in links and conversation starters](/guides/growth-tools)
+- [Capabilities](/concepts/capabilities): which features each number has
+- [Event reference](/webhooks/events): `connection.*` and `phone_number.*`
