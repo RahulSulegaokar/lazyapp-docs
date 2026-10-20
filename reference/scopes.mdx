@@ -20,6 +20,7 @@ Every API key carries scopes. A call outside them returns `403`.
 | `billing:write` | Change a WhatsApp account's billing currency |
 | `connections:write` | Change WhatsApp numbers and their account: register, two-step PIN, display name, blue tick, QR codes, conversation starters, opt-in links, adding numbers |
 | `payments:write` | Manage payment setups and gateway accounts, and refund payments |
+| `catalog:write` | Add, change and remove products in the connection's Meta catalog |
 
 ## By endpoint group
 
@@ -46,8 +47,10 @@ Every API key carries scopes. A call outside them returns `403`.
 | Payments — setups, gateway accounts, refunds | `messages:read` (list setups) | `payments:write` |
 | Payment templates | — | `templates:write` |
 | Shop settings | `messages:read` | `messages:send` |
+| Catalog products and changes | `messages:read` | `catalog:write` |
 | Pricing and currency change | `billing:read` | `billing:write` |
 | WhatsApp analytics | `messages:read` | `templates:write` (template insights) |
+| Ad results | `messages:read` | — |
 
 <Note>
   Media metadata reads use `messages:read`, while uploads and deletes need `media:write`.

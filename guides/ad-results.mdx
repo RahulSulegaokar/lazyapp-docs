@@ -1,0 +1,80 @@
+---
+title: "Ad results"
+description: "See the chats, leads and sales each Click-to-WhatsApp ad brought in, next to its name, spend and cost per result."
+---
+
+When someone taps a Click-to-WhatsApp ad on Facebook or Instagram and messages you, their first message tells LazyApp which ad it came from. When Meta later spots a lead or a purchase in that chat, it tells LazyApp too. **Analytics → Ad results** puts those together per ad, so you can see which ads bring customers and which only bring chats.
+
+## What you see
+
+| Column | Where it comes from |
+| --- | --- |
+| Chats | Messages that arrived from an ad |
+| Leads | Chats Meta marked as a lead |
+| Purchases and sales | Purchases Meta spotted in chats, with their value |
+| Spend | What the ad cost, from your Meta ad account |
+| Cost per result | Spend divided by purchases. With no purchases, by leads; with no leads, by chats |
+
+Chats, leads and purchases need nothing extra. Leads and purchases need automatic events turned on when you connected WhatsApp (not available in the EU, UK or Japan).
+
+Ad names, campaigns, spend and cost per result need your ad account connected.
+
+## Connect your ad account
+
+1. Open **Analytics → Ad results**.
+2. Click **Connect ad account**.
+3. Pick your ad account from the list, or paste its ID from the top left of Ads Manager.
+
+LazyApp only reads ad names and spend. It never changes ads, budgets or audiences. Spend is refreshed once a day; **Refresh spend** fetches it now.
+
+<Warning>
+  Reading ad spend needs Meta's `ads_read` permission for LazyApp. Meta is still reviewing that request. Until it is approved, the page marks spend as **Waiting for Meta approval**, and chats, leads and purchases still count.
+</Warning>
+
+## Over the API
+
+```bash
+curl -G "https://lazyapp.in/v1/analytics/ads" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  --data-urlencode "days=30" \
+  --data-urlencode "group_by=ad"
+```
+
+**Scope:** `messages:read`
+
+| Parameter | Notes |
+| --- | --- |
+| `days` | `7`, `30` (default) or `90` |
+| `group_by` | `ad` (default) or `campaign` |
+
+```json
+{
+  "data": [
+    {
+      "ad_id": "120211111111",
+      "ad_name": "Diwali cake ad",
+      "headline": "Order your Diwali cake",
+      "campaign_id": "120200000000",
+      "campaign_name": "Festive",
+      "conversations": 42,
+      "leads": 9,
+      "purchases": 3,
+      "revenue": 268500,
+      "spend": 240000,
+      "meta_conversations": 45,
+      "result_kind": "purchase",
+      "cost_per_result": 80000
+    }
+  ],
+  "totals": { "conversations": 42, "leads": 9, "purchases": 3, "revenue": 268500, "meta_conversations": 45, "spend": 240000, "result_kind": "purchase", "cost_per_result": 80000 },
+  "currency": "INR",
+  "revenue_currency": "INR",
+  "days": 30,
+  "spend_available": true,
+  "spend_unavailable_reason": null
+}
+```
+
+Amounts are minor units: `240000` with `INR` is ₹2,400. `spend` and `cost_per_result` are `null` until an ad account is connected and readable; `spend_unavailable_reason` says why. `meta_conversations` is Meta's own count of conversations started, which uses a 7-day attribution window and can differ from `conversations`.
+
+To act on a lead the moment it happens, subscribe to the [`conversion.detected`](/webhooks/events) webhook.

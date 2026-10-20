@@ -23531,6 +23531,318 @@
           }
         }
       }
+    },
+    "/v1/catalog/items": {
+      "post": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Add, change or remove products",
+        "description": "Up to 5,000 product changes per call. LazyApp queues them and sends them through Meta's Catalog Batch API in chunks; the response is the queued batch. Poll `GET /v1/catalog/batches/{batch}` for the result and the rows Meta refused. See [Manage products](/sending/catalog-inventory).\n\nNeeds Meta's `catalog_management` permission for LazyApp; until Meta approves it the call returns `403` with `code: meta_approval_pending`.\n\n**Required scope:** `catalog:write`",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "connection_uuid",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "phone_number_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "items"
+                ],
+                "properties": {
+                  "connection_uuid": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "phone_number_id": {
+                    "type": "string"
+                  },
+                  "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 5000,
+                    "items": {
+                      "$ref": "#/components/schemas/CatalogItemInput"
+                    }
+                  }
+                }
+              },
+              "example": {
+                "items": [
+                  {
+                    "sku": "TSHIRT-RED-M",
+                    "title": "Red cotton T-shirt (M)",
+                    "price": 49900,
+                    "currency": "INR",
+                    "quantity": 25,
+                    "image_url": "https://acme.example/images/red-tee.jpg"
+                  },
+                  {
+                    "action": "update",
+                    "sku": "MUG-01",
+                    "quantity": 0
+                  },
+                  {
+                    "action": "delete",
+                    "sku": "OLD-ITEM-7"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CatalogBatch"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks `catalog:write` or is restricted from this number, or Meta has not approved catalog changes yet (`meta_approval_pending`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaApprovalPending"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, no connection, or the connection has no catalog.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/catalog/batches/{batch}": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Read a catalog change",
+        "description": "Where a catalog change is, and every row Meta refused with a plain reason. `queued` and `processing` mean Meta has not finished; poll every few seconds.\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "batch",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The batch.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CatalogBatch"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No catalog change with that id in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/analytics/ads": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Read Click-to-WhatsApp ad results",
+        "description": "Chats, leads, purchases and revenue per ad or campaign, from Meta's webhooks. With an ad account connected in the console and Meta's `ads_read` permission, also the ad and campaign names, spend and cost per result, refreshed daily. Amounts are minor units. See [Ad results](/guides/ad-results).\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                7,
+                30,
+                90
+              ],
+              "default": 30
+            }
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ad",
+                "campaign"
+              ],
+              "default": "ad"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The report.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdResultsReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -28501,6 +28813,411 @@
           },
           "waba_id": {
             "type": "string"
+          }
+        }
+      },
+      "CatalogItemInput": {
+        "type": "object",
+        "required": [
+          "sku"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "upsert",
+              "update",
+              "delete"
+            ],
+            "default": "upsert",
+            "description": "`upsert` adds the product or replaces it when the code exists, and needs `title`, `price` and `image_url`. `update` changes only the fields you send. `delete` removes the product by `sku`."
+          },
+          "sku": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Your product code (Meta's retailer id). No spaces or commas.",
+            "examples": [
+              "TSHIRT-RED-M"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 9999,
+            "description": "Defaults to the title for a new product."
+          },
+          "price": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Minor units (paise, cents). `49900` with `INR` is ₹499.00.",
+            "examples": [
+              49900
+            ]
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 3,
+            "maxLength": 3,
+            "default": "INR"
+          },
+          "availability": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "in_stock",
+              "out_of_stock",
+              null
+            ]
+          },
+          "quantity": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1000000,
+            "description": "How many can be sold. `0` also marks the product out of stock."
+          },
+          "image_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "A public `https://` image, at least 500 × 500 pixels."
+          },
+          "link": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "description": "Product page. Defaults to a chat link with your number for a new product."
+          },
+          "brand": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100,
+            "description": "Defaults to your business name for a new product."
+          },
+          "condition": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "new",
+              "refurbished",
+              "used",
+              null
+            ],
+            "default": "new"
+          }
+        }
+      },
+      "CatalogBatch": {
+        "type": "object",
+        "description": "One change to the catalog, sent to Meta in the background.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "catalog_id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "console",
+              "csv",
+              "api"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "processing",
+              "finished",
+              "finished_with_errors",
+              "failed"
+            ]
+          },
+          "status_label": {
+            "type": "string",
+            "examples": [
+              "Done, some rows need fixing"
+            ]
+          },
+          "filename": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total_rows": {
+            "type": "integer"
+          },
+          "skipped_rows": {
+            "type": "integer",
+            "description": "Rows refused before reaching Meta."
+          },
+          "error_count": {
+            "type": "integer"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "description": "Position of the item in `items` (1-based), or the CSV row."
+                },
+                "sku": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "message": {
+                  "type": "string",
+                  "description": "What to fix, in plain words."
+                }
+              }
+            }
+          },
+          "failure_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "MetaApprovalPending": {
+        "type": "object",
+        "required": [
+          "message",
+          "code",
+          "permission"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "meta_approval_pending"
+            ]
+          },
+          "permission": {
+            "type": "string",
+            "enum": [
+              "catalog_management",
+              "ads_read"
+            ]
+          }
+        }
+      },
+      "AdResult": {
+        "type": "object",
+        "properties": {
+          "ad_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Absent when grouped by campaign."
+          },
+          "ad_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "headline": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The ad headline from the chat referral."
+          },
+          "campaign_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "campaign_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ads": {
+            "type": "integer",
+            "description": "Only when grouped by campaign."
+          },
+          "conversations": {
+            "type": "integer",
+            "description": "Chats started from the ad."
+          },
+          "leads": {
+            "type": "integer"
+          },
+          "purchases": {
+            "type": "integer"
+          },
+          "revenue": {
+            "type": "integer",
+            "description": "Purchase value in minor units of `revenue_currency`."
+          },
+          "spend": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Minor units of `currency`. `null` until an ad account is connected and Meta allows reading it."
+          },
+          "meta_conversations": {
+            "type": "integer",
+            "description": "Meta's own count of messaging conversations started (7-day attribution)."
+          },
+          "result_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "purchase",
+              "lead",
+              "conversation",
+              null
+            ],
+            "description": "The deepest result the ad produced, used for `cost_per_result`."
+          },
+          "cost_per_result": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "`spend` divided by the number of `result_kind` results, in minor units."
+          }
+        }
+      },
+      "AdResultsReport": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdResult"
+            }
+          },
+          "totals": {
+            "type": "object",
+            "properties": {
+              "conversations": {
+                "type": "integer",
+                "description": "Chats started from the ad."
+              },
+              "leads": {
+                "type": "integer"
+              },
+              "purchases": {
+                "type": "integer"
+              },
+              "revenue": {
+                "type": "integer",
+                "description": "Purchase value in minor units of `revenue_currency`."
+              },
+              "spend": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Minor units of `currency`. `null` until an ad account is connected and Meta allows reading it."
+              },
+              "meta_conversations": {
+                "type": "integer",
+                "description": "Meta's own count of messaging conversations started (7-day attribution)."
+              },
+              "result_kind": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "purchase",
+                  "lead",
+                  "conversation",
+                  null
+                ],
+                "description": "The deepest result the ad produced, used for `cost_per_result`."
+              },
+              "cost_per_result": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "`spend` divided by the number of `result_kind` results, in minor units."
+              }
+            }
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Ad account currency for `spend`."
+          },
+          "revenue_currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "days": {
+            "type": "integer"
+          },
+          "spend_available": {
+            "type": "boolean"
+          },
+          "spend_unavailable_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       }

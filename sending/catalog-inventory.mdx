@@ -1,0 +1,147 @@
+---
+title: "Manage products"
+description: "Add, edit and remove catalog products, set price, stock and photo, or upload a spreadsheet, from the console or the API."
+---
+
+Your products live in a Meta catalog. Until now you edited them in Meta Commerce Manager and LazyApp only read them. With **Products** you change them from LazyApp: one at a time in the console, many at once from a spreadsheet, or in bulk over the API.
+
+Every change goes to Meta through its Catalog Batch API. Meta applies changes in the background, usually within a minute, so LazyApp queues each change, sends it, and keeps checking until Meta is done. Rows Meta refuses come back with the reason in plain words.
+
+<Warning>
+  Changing a catalog needs Meta's `catalog_management` permission for LazyApp. Meta is still reviewing that request. Until it is approved, **Products** shows your products and the full flow, marked **Waiting for Meta approval**, and the API returns `403` with `code: meta_approval_pending`. Reading products works today.
+</Warning>
+
+## Before you start
+
+Connect a catalog to your number: **WhatsApp numbers → your number → Shop**, then paste the catalog ID from Commerce Manager. See [Shop settings](/sending/catalog#shop-settings).
+
+## In the console
+
+Open **Products**.
+
+- **Add product.** Enter a name, price and photo. Stock is optional: leave it empty if you don't count stock, or enter how many can be sold. At `0` the product shows as out of stock. **More details** holds the product code (SKU), a product page link, brand and condition.
+- **Edit.** Click a product. Only what you change is sent.
+- **Remove.** Use the row menu. Orders already placed are not affected.
+- **Upload spreadsheet.** Download the template, fill it in Excel or Google Sheets, save as CSV and upload it.
+
+Progress shows under **Recent changes**, with every row that needs fixing.
+
+### What LazyApp fills in for you
+
+Meta requires a product page link, brand, condition and description for every new product. A shop owner rarely has all four, so for a new product LazyApp uses:
+
+| Field | Default |
+| --- | --- |
+| Product page | A chat link to your number, `https://wa.me/<your number>` |
+| Brand | Your business name |
+| Condition | `new` |
+| Description | The product name |
+
+A photo you pick in the console is stored by LazyApp and given to Meta as a private link only Meta knows, because Meta downloads catalog photos more than once.
+
+## Spreadsheet format
+
+The first row names the columns. Only `sku` is required in every row.
+
+| Column | Notes |
+| --- | --- |
+| `sku` | Your product code. No spaces or commas. Also accepted: `id`, `retailer_id`, `code` |
+| `title` | Product name. A row with a title is a full product: it is added, or replaces the one with the same code |
+| `description` | Optional |
+| `price` | Written normally: `499`, `1,299.50` |
+| `currency` | 3 letters. Defaults to `INR` |
+| `availability` | `in stock` or `out of stock` |
+| `quantity` | Whole number. `0` marks the product out of stock |
+| `image_url` | Public `https://` photo, at least 500 × 500 pixels |
+| `link`, `brand`, `condition` | Optional |
+| `action` | `delete` removes the product |
+
+A row with only `sku` and a few columns updates just those columns, so a stock update can be two columns wide:
+
+```csv
+sku,quantity
+TSHIRT-RED-M,12
+MUG-01,0
+```
+
+LazyApp checks every row before sending it. A row with a problem, such as a price that is not a number, is skipped and listed with its row number; the other rows still go through. One file can hold up to 20,000 products and 10 MB.
+
+## Over the API
+
+```bash
+curl -X POST "https://lazyapp.in/v1/catalog/items" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Idempotency-Key: catalog-2026-10-20" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "sku": "TSHIRT-RED-M",
+        "title": "Red cotton T-shirt (M)",
+        "price": 49900,
+        "currency": "INR",
+        "quantity": 25,
+        "image_url": "https://acme.example/images/red-tee.jpg"
+      },
+      { "action": "update", "sku": "MUG-01", "quantity": 0 },
+      { "action": "delete", "sku": "OLD-ITEM-7" }
+    ]
+  }'
+```
+
+**Scope:** `catalog:write`
+
+| Field | Notes |
+| --- | --- |
+| `items` | 1 to 5,000 changes. Split larger catalogs across calls |
+| `items[].action` | `upsert` (default) adds or replaces the product and needs `title`, `price` and `image_url`. `update` changes only the fields you send. `delete` removes it |
+| `items[].price` | Minor units: `49900` with `INR` is ₹499.00 |
+| `items[].availability` | `in_stock` or `out_of_stock` |
+| `items[].quantity` | How many can be sold. `0` also marks it out of stock |
+| `connection_uuid`, `phone_number_id` | Pick the number when the workspace has more than one |
+
+The response is `202` with the queued change:
+
+```json
+{
+  "data": {
+    "id": "9b7c7d0e-4c55-4f0a-9d7e-2f1e3a3b6c11",
+    "catalog_id": "1234567890",
+    "source": "api",
+    "status": "queued",
+    "status_label": "Waiting to send",
+    "total_rows": 3,
+    "skipped_rows": 0,
+    "error_count": 0,
+    "errors": [],
+    "failure_message": null
+  }
+}
+```
+
+### Check the result
+
+```bash
+curl "https://lazyapp.in/v1/catalog/batches/9b7c7d0e-4c55-4f0a-9d7e-2f1e3a3b6c11" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+**Scope:** `messages:read`
+
+`status` moves from `queued` to `processing`, then to `finished`, `finished_with_errors` or `failed`. Each entry in `errors` names the item by its position in `items` (`line`, starting at 1) and its `sku`:
+
+```json
+{ "line": 2, "sku": "MUG-01", "message": "The price is not valid. Use a number such as 499 or 499.50." }
+```
+
+Poll every few seconds while `status` is `queued` or `processing`. Small changes finish within a minute; a 5,000-row change can take several.
+
+### Errors
+
+| Status | When |
+| --- | --- |
+| `403` with `code: meta_approval_pending` | Meta has not approved catalog changes for LazyApp yet |
+| `403` | The key lacks `catalog:write`, or is restricted from this number |
+| `422` | A field failed validation, or the number has no catalog connected |
+
+Read products with [`GET /v1/catalog/products`](/sending/catalog#list-products).
