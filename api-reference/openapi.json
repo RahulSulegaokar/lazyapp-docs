@@ -276,6 +276,16 @@
                       "category": {
                         "type": "string",
                         "maxLength": 32
+                      },
+                      "message_activity_sharing": {
+                        "type": "boolean",
+                        "description": "Marketing: let Meta use this message's activity (read, click) to improve delivery. Omit to use your account default."
+                      },
+                      "max_price_multiplier": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "maximum": 100,
+                        "description": "Marketing: multiply the template's max price for this one message."
                       }
                     }
                   },
@@ -539,11 +549,6 @@
                       "authentication"
                     ]
                   },
-                  "message_ttl": {
-                    "type": "string",
-                    "format": "date-time",
-                    "nullable": true
-                  },
                   "context": {
                     "type": "object",
                     "properties": {
@@ -572,6 +577,118 @@
                       "type": "string",
                       "maxLength": 512
                     }
+                  },
+                  "ttl_seconds": {
+                    "type": "integer",
+                    "minimum": 30,
+                    "maximum": 43200,
+                    "description": "How long WhatsApp keeps trying to deliver. Authentication allows at most 900 (Meta default 600)."
+                  },
+                  "template_name": {
+                    "type": "string",
+                    "maxLength": 512,
+                    "pattern": "^[a-z0-9_]+$",
+                    "description": "Utility only: Meta files every message with this name under one generated template, so insights group them."
+                  },
+                  "interactive": {
+                    "type": "object",
+                    "description": "Utility only. One of a link button, up to three reply buttons, or a Call on WhatsApp button, with an optional media header.",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "cta_url",
+                          "buttons",
+                          "voice_call"
+                        ]
+                      },
+                      "header": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "text",
+                              "image",
+                              "video",
+                              "document"
+                            ]
+                          },
+                          "text": {
+                            "type": "string",
+                            "maxLength": 60
+                          },
+                          "link": {
+                            "type": "string",
+                            "maxLength": 2000,
+                            "description": "https only."
+                          },
+                          "id": {
+                            "type": "string",
+                            "maxLength": 128,
+                            "description": "Uploaded media id, instead of `link`."
+                          },
+                          "filename": {
+                            "type": "string",
+                            "maxLength": 240
+                          }
+                        }
+                      },
+                      "footer": {
+                        "type": "string",
+                        "maxLength": 60
+                      },
+                      "cta": {
+                        "type": "object",
+                        "properties": {
+                          "display_text": {
+                            "type": "string",
+                            "maxLength": 20
+                          },
+                          "url": {
+                            "type": "string",
+                            "maxLength": 2000
+                          }
+                        }
+                      },
+                      "buttons": {
+                        "type": "array",
+                        "maxItems": 3,
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "maxLength": 256
+                            },
+                            "title": {
+                              "type": "string",
+                              "maxLength": 20
+                            }
+                          },
+                          "required": [
+                            "title"
+                          ]
+                        }
+                      },
+                      "voice_call": {
+                        "type": "object",
+                        "properties": {
+                          "display_text": {
+                            "type": "string",
+                            "maxLength": 20
+                          },
+                          "ttl_minutes": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 43200
+                          }
+                        }
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
                   }
                 },
                 "required": [
@@ -2462,7 +2579,7 @@
                   },
                   "body_examples": {
                     "type": "array",
-                    "maxItems": 10,
+                    "maxItems": 50,
                     "items": {
                       "type": "string",
                       "maxLength": 255
@@ -2482,12 +2599,30 @@
                           "TEXT",
                           "IMAGE",
                           "VIDEO",
-                          "DOCUMENT"
-                        ]
+                          "GIF",
+                          "DOCUMENT",
+                          "LOCATION",
+                          "PRODUCT"
+                        ],
+                        "description": "`GIF` is an MP4 of up to 3.5 MB and marketing only. `PRODUCT` is for catalog templates."
                       },
                       "text": {
                         "type": "string",
                         "maxLength": 60
+                      },
+                      "examples": {
+                        "type": "array",
+                        "maxItems": 1,
+                        "items": {
+                          "type": "string",
+                          "maxLength": 120
+                        },
+                        "description": "Sample for a `{{1}}` in a text header."
+                      },
+                      "example_handle": {
+                        "type": "string",
+                        "maxLength": 1024,
+                        "description": "From `POST /v1/templates/media`: the sample Meta reviews for an image, video, GIF or document header. GIF is marketing only."
                       }
                     }
                   },
@@ -2504,7 +2639,12 @@
                             "URL",
                             "PHONE_NUMBER",
                             "OTP",
-                            "FLOW"
+                            "FLOW",
+                            "COPY_CODE",
+                            "CATALOG",
+                            "MPM",
+                            "SPM",
+                            "VOICE_CALL"
                           ]
                         },
                         "text": {
@@ -2514,7 +2654,21 @@
                         "url": {
                           "type": "string",
                           "maxLength": 2000,
-                          "description": "Must be https."
+                          "description": "Must be https. A trailing `{{1}}` makes the end of the link a send-time value."
+                        },
+                        "examples": {
+                          "type": "array",
+                          "maxItems": 1,
+                          "items": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "description": "A full sample link for a dynamic URL."
+                        },
+                        "example": {
+                          "type": "string",
+                          "maxLength": 20,
+                          "description": "Sample coupon code for `COPY_CODE`."
                         },
                         "phone_number": {
                           "type": "string",
@@ -2523,6 +2677,26 @@
                         "flow_id": {
                           "type": "string",
                           "maxLength": 64
+                        },
+                        "ttl_minutes": {
+                          "type": "integer",
+                          "minimum": 1440,
+                          "maximum": 43200,
+                          "description": "`VOICE_CALL` only: how long the Call on WhatsApp button works after delivery. Meta defaults to 7 days."
+                        },
+                        "app_deep_link": {
+                          "type": "object",
+                          "description": "Marketing URL buttons only: open your Android app first, falling back to the Play Store or the URL.",
+                          "properties": {
+                            "android_deep_link": {
+                              "type": "string",
+                              "maxLength": 2000
+                            },
+                            "android_fallback_playstore_url": {
+                              "type": "string",
+                              "maxLength": 2000
+                            }
+                          }
                         }
                       },
                       "required": [
@@ -2533,14 +2707,166 @@
                   "submit": {
                     "type": "boolean",
                     "description": "Submit to Meta immediately."
+                  },
+                  "parameter_format": {
+                    "type": "string",
+                    "enum": [
+                      "POSITIONAL",
+                      "NAMED"
+                    ],
+                    "description": "`NAMED` uses `{{first_name}}`-style variables."
+                  },
+                  "library_template_name": {
+                    "type": "string",
+                    "maxLength": 512,
+                    "pattern": "^[a-z0-9_]+$",
+                    "description": "Clone a ready-made template from `GET /v1/templates/library` instead of writing `body_text`."
+                  },
+                  "limited_time_offer": {
+                    "type": "object",
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "maxLength": 16
+                      },
+                      "has_expiration": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "authentication": {
+                    "type": "object",
+                    "properties": {
+                      "add_security_recommendation": {
+                        "type": "boolean"
+                      },
+                      "code_expiration_minutes": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 90
+                      }
+                    }
+                  },
+                  "carousel_cards": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "header_format": {
+                          "type": "string",
+                          "enum": [
+                            "IMAGE",
+                            "VIDEO",
+                            "PRODUCT"
+                          ]
+                        },
+                        "example_handle": {
+                          "type": "string",
+                          "maxLength": 1024,
+                          "description": "From `POST /v1/templates/media`. Not used for `PRODUCT` cards."
+                        },
+                        "body_text": {
+                          "type": "string",
+                          "maxLength": 160
+                        },
+                        "buttons": {
+                          "type": "array",
+                          "maxItems": 2,
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "QUICK_REPLY",
+                                  "URL",
+                                  "PHONE_NUMBER",
+                                  "SPM"
+                                ]
+                              },
+                              "text": {
+                                "type": "string",
+                                "maxLength": 25
+                              },
+                              "url": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "examples": {
+                                "type": "array",
+                                "maxItems": 1,
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "phone_number": {
+                                "type": "string",
+                                "maxLength": 20
+                              }
+                            },
+                            "required": [
+                              "type"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "description": "Media carousels take 2 to 10 cards; product carousels exactly 2 when created. Every card has the same button types."
+                  },
+                  "message_send_ttl_seconds": {
+                    "type": "integer",
+                    "minimum": -1,
+                    "maximum": 2592000,
+                    "description": "How long WhatsApp keeps trying to deliver. Authentication 30\u2013900, utility 30\u201343200, marketing 43200\u20132592000. `-1` means 30 days (authentication and utility only)."
+                  },
+                  "call_permission_request": {
+                    "type": "boolean",
+                    "description": "Marketing or utility: ask the customer for permission to call them. Body only, no buttons."
+                  },
+                  "cta_url_link_tracking_opted_out": {
+                    "type": "boolean",
+                    "description": "Marketing: turn off Meta's click tracking for URL buttons."
+                  },
+                  "creative_features": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string",
+                      "enum": [
+                        "OPT_IN",
+                        "OPT_OUT"
+                      ]
+                    },
+                    "description": "Marketing: Meta's automatic creative improvements, such as `image_animation` or `add_text_overlay`."
+                  },
+                  "max_price": {
+                    "type": "object",
+                    "description": "Marketing only, after the max price agreement is accepted. Clear it by sending `null` for both fields.",
+                    "properties": {
+                      "bid_amount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "nullable": true,
+                        "description": "The most you pay per 1,000 delivered messages, in minor units of your WhatsApp account currency."
+                      },
+                      "country_multipliers": {
+                        "type": "object",
+                        "nullable": true,
+                        "additionalProperties": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "description": "Two-letter country code to a multiplier of `bid_amount`."
+                      }
+                    }
                   }
                 },
                 "required": [
                   "name",
                   "language",
-                  "category",
-                  "body_text"
-                ]
+                  "category"
+                ],
+                "description": "`body_text` is required unless `library_template_name` is set."
               }
             }
           }
@@ -11873,6 +12199,1193 @@
           }
         ]
       }
+    },
+    "/v1/templates/library": {
+      "get": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Search the template library",
+        "description": "Meta's ready-made utility and authentication templates. Create one with `POST /v1/templates` and `library_template_name`.\n\n**Required scope:** `templates:read`",
+        "responses": {
+          "200": {
+            "description": "Matching library templates.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LibraryTemplate"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the request. `message` says why in plain words and `code` carries Meta's error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The workspace has no WhatsApp connection in this mode.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Meta could not be reached or refused the upload. Safe to retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "topic",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z_]{2,64}$"
+            }
+          },
+          {
+            "name": "usecase",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z_]{2,64}$"
+            }
+          },
+          {
+            "name": "industry",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z_]{2,64}$"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/templates/media": {
+      "post": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Upload a header sample",
+        "description": "Uploads the sample Meta reviews for a media header or carousel card. Send the returned `handle` as `header.example_handle` or `carousel_cards[].example_handle`. The sample is for review only; you pass the real media when you send.\n\n**Required scope:** `templates:write`",
+        "responses": {
+          "201": {
+            "description": "The upload handle.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "handle": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the request. `message` says why in plain words and `code` carries Meta's error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The workspace has no WhatsApp connection in this mode.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Meta could not be reached or refused the upload. Safe to retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "IMAGE",
+                      "VIDEO",
+                      "GIF",
+                      "DOCUMENT"
+                    ]
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "JPEG, PNG, MP4 or PDF up to 16 MB. A GIF is an MP4 of up to 3.5 MB."
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/templates/authentication": {
+      "post": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Create a login code template in many languages",
+        "description": "Creates or updates one authentication template in up to 50 languages in a single call.\n\n**Required scope:** `templates:write`",
+        "responses": {
+          "201": {
+            "description": "One row per language.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "uuid": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "language": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "provider_template_id": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the request. `message` says why in plain words and `code` carries Meta's error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The workspace has no WhatsApp connection in this mode.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 512,
+                    "pattern": "^[a-z0-9_]+$"
+                  },
+                  "languages": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "otp_type": {
+                    "type": "string",
+                    "enum": [
+                      "COPY_CODE",
+                      "ONE_TAP",
+                      "ZERO_TAP"
+                    ],
+                    "default": "COPY_CODE"
+                  },
+                  "package_name": {
+                    "type": "string",
+                    "maxLength": 224,
+                    "description": "Required for `ONE_TAP` and `ZERO_TAP`."
+                  },
+                  "signature_hash": {
+                    "type": "string",
+                    "minLength": 11,
+                    "maxLength": 11,
+                    "description": "Required for `ONE_TAP` and `ZERO_TAP`."
+                  },
+                  "add_security_recommendation": {
+                    "type": "boolean"
+                  },
+                  "code_expiration_minutes": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 90
+                  },
+                  "message_send_ttl_seconds": {
+                    "type": "integer",
+                    "minimum": -1,
+                    "maximum": 900
+                  }
+                },
+                "required": [
+                  "name",
+                  "languages"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/templates/migrate": {
+      "post": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Copy templates from another WhatsApp account",
+        "description": "Copies approved templates from another WhatsApp Business Account owned by the same Meta business into this workspace's account. Run `POST /v1/templates/sync` afterwards to see them.\n\n**Required scope:** `templates:write`",
+        "responses": {
+          "200": {
+            "description": "How many templates were copied, and why the others failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "migrated": {
+                      "type": "integer"
+                    },
+                    "failed": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the request. `message` says why in plain words and `code` carries Meta's error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The workspace has no WhatsApp connection in this mode.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "source_waba_id": {
+                    "type": "string",
+                    "pattern": "^\\d{5,25}$"
+                  },
+                  "template_ids": {
+                    "type": "array",
+                    "maxItems": 500,
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Meta template ids to copy. Omit to copy a page of all eligible templates."
+                  },
+                  "page": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                },
+                "required": [
+                  "source_waba_id"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/templates/{template}/unpause": {
+      "post": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Unpause a template",
+        "description": "Asks Meta to make a paused template sendable again. Meta allows this only once the pause period has passed.\n\n**Required scope:** `templates:write`",
+        "responses": {
+          "200": {
+            "description": "The template's new status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "uuid": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Template not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the request. `message` says why in plain words and `code` carries Meta's error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The workspace has no WhatsApp connection in this mode.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "template",
+            "in": "path",
+            "required": true,
+            "description": "Template name or uuid.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ]
+      }
+    },
+    "/v1/templates/{template}/compare": {
+      "get": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Compare two templates",
+        "description": "Compares sends and block rates of two approved templates over the last 7, 30, 60 or 90 days. Needs template results turned on in the console.\n\n**Required scope:** `templates:read`",
+        "responses": {
+          "200": {
+            "description": "The comparison.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateComparison"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Template not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the request. `message` says why in plain words and `code` carries Meta's error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The workspace has no WhatsApp connection in this mode.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "template",
+            "in": "path",
+            "required": true,
+            "description": "Template name or uuid.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "compare_with",
+            "in": "query",
+            "required": true,
+            "description": "The other template's name or uuid.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                7,
+                30,
+                60,
+                90
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/v1/template-groups": {
+      "get": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "List template groups",
+        "description": "Named sets of templates whose results Meta reports together.\n\n**Required scope:** `templates:read`",
+        "responses": {
+          "200": {
+            "description": "Template groups.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateGroupList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the request. `message` says why in plain words and `code` carries Meta's error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The workspace has no WhatsApp connection in this mode.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Create a template group",
+        "description": "Creates the group at Meta with the given templates.\n\n**Required scope:** `templates:write`",
+        "responses": {
+          "201": {
+            "description": "The new group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateGroup"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the request. `message` says why in plain words and `code` carries Meta's error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The workspace has no WhatsApp connection in this mode.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 512
+                  },
+                  "templates": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Template names or uuids."
+                  }
+                },
+                "required": [
+                  "name",
+                  "templates"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/template-groups/{group}": {
+      "patch": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Update a template group",
+        "description": "Renames the group, or adds and removes templates.\n\n**Required scope:** `templates:write`",
+        "responses": {
+          "200": {
+            "description": "The updated group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateGroup"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Template group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the request. `message` says why in plain words and `code` carries Meta's error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The workspace has no WhatsApp connection in this mode.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "description": "Template group uuid.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 512
+                  },
+                  "add_templates": {
+                    "type": "array",
+                    "maxItems": 500,
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "remove_templates": {
+                    "type": "array",
+                    "maxItems": 500,
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Delete a template group",
+        "description": "Deletes the group at Meta. The templates stay.\n\n**Required scope:** `templates:write`",
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "404": {
+            "description": "Template group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the request. `message` says why in plain words and `code` carries Meta's error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The workspace has no WhatsApp connection in this mode.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "description": "Template group uuid.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -12334,7 +13847,77 @@
             "type": "array",
             "items": {
               "type": "object",
-              "properties": {}
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "QUICK_REPLY",
+                    "URL",
+                    "PHONE_NUMBER",
+                    "OTP",
+                    "FLOW",
+                    "COPY_CODE",
+                    "CATALOG",
+                    "MPM",
+                    "SPM",
+                    "VOICE_CALL"
+                  ]
+                },
+                "text": {
+                  "type": "string",
+                  "maxLength": 25
+                },
+                "url": {
+                  "type": "string",
+                  "maxLength": 2000,
+                  "description": "Must be https. A trailing `{{1}}` makes the end of the link a send-time value."
+                },
+                "examples": {
+                  "type": "array",
+                  "maxItems": 1,
+                  "items": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "description": "A full sample link for a dynamic URL."
+                },
+                "example": {
+                  "type": "string",
+                  "maxLength": 20,
+                  "description": "Sample coupon code for `COPY_CODE`."
+                },
+                "phone_number": {
+                  "type": "string",
+                  "maxLength": 32
+                },
+                "flow_id": {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                "ttl_minutes": {
+                  "type": "integer",
+                  "minimum": 1440,
+                  "maximum": 43200,
+                  "description": "`VOICE_CALL` only: how long the Call on WhatsApp button works after delivery. Meta defaults to 7 days."
+                },
+                "app_deep_link": {
+                  "type": "object",
+                  "description": "Marketing URL buttons only: open your Android app first, falling back to the Play Store or the URL.",
+                  "properties": {
+                    "android_deep_link": {
+                      "type": "string",
+                      "maxLength": 2000
+                    },
+                    "android_fallback_playstore_url": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  }
+                }
+              },
+              "required": [
+                "type"
+              ]
             }
           },
           "rejection_reason": {
@@ -12362,6 +13945,122 @@
           "created_at": {
             "type": "string",
             "format": "date-time",
+            "nullable": true
+          },
+          "carousel_cards": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "header_format": {
+                  "type": "string",
+                  "enum": [
+                    "IMAGE",
+                    "VIDEO",
+                    "PRODUCT"
+                  ]
+                },
+                "example_handle": {
+                  "type": "string",
+                  "maxLength": 1024,
+                  "description": "From `POST /v1/templates/media`. Not used for `PRODUCT` cards."
+                },
+                "body_text": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "buttons": {
+                  "type": "array",
+                  "maxItems": 2,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "QUICK_REPLY",
+                          "URL",
+                          "PHONE_NUMBER",
+                          "SPM"
+                        ]
+                      },
+                      "text": {
+                        "type": "string",
+                        "maxLength": 25
+                      },
+                      "url": {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      "examples": {
+                        "type": "array",
+                        "maxItems": 1,
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "phone_number": {
+                        "type": "string",
+                        "maxLength": 20
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "limited_time_offer": {
+            "type": "object",
+            "nullable": true
+          },
+          "call_permission_request": {
+            "type": "boolean"
+          },
+          "message_send_ttl_seconds": {
+            "type": "integer",
+            "nullable": true
+          },
+          "cta_url_link_tracking_opted_out": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "marketing_options": {
+            "type": "object",
+            "nullable": true,
+            "description": "Creative features and max price as last submitted."
+          },
+          "source": {
+            "type": "string",
+            "nullable": true,
+            "description": "Set when Meta generated the template (for example from Direct Send). Such templates cannot be edited or deleted here."
+          },
+          "sub_category": {
+            "type": "string",
+            "nullable": true
+          },
+          "pending_category": {
+            "type": "string",
+            "nullable": true,
+            "description": "The category Meta will move this template to."
+          },
+          "template_group": {
+            "type": "string",
+            "nullable": true,
+            "description": "uuid of the template group."
+          },
+          "send_features": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {}
+            },
+            "description": "Extra inputs a send needs, such as `cards`, `coupon_code` or `voice_call`."
+          },
+          "rejection_reason_text": {
+            "type": "string",
             "nullable": true
           }
         }
@@ -14519,6 +16218,155 @@
           },
           "message": {
             "type": "string"
+          }
+        }
+      },
+      "TemplateGroup": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "provider_group_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "templates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "uuid": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "language": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "analytics": {
+            "type": "object",
+            "nullable": true,
+            "description": "Results Meta reports for the group as a whole."
+          },
+          "analytics_fetched_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "TemplateGroupList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateGroup"
+            }
+          }
+        }
+      },
+      "LibraryTemplate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "topic": {
+            "type": "string",
+            "nullable": true
+          },
+          "usecase": {
+            "type": "string",
+            "nullable": true
+          },
+          "industry": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "header": {
+            "type": "string",
+            "nullable": true
+          },
+          "body": {
+            "type": "string"
+          },
+          "body_params": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "buttons": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        }
+      },
+      "TemplateComparison": {
+        "type": "object",
+        "properties": {
+          "window": {
+            "type": "integer",
+            "description": "Days compared."
+          },
+          "templates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "language": {
+                  "type": "string"
+                },
+                "sends": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "blockRank": {
+                  "type": "integer",
+                  "nullable": true,
+                  "description": "1 is the lower block rate."
+                },
+                "topBlockReason": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "lowerBlockRate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Meta template id with the lower block rate."
           }
         }
       }
