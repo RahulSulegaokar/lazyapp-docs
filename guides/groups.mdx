@@ -92,6 +92,8 @@ curl -X POST https://lazyapp.in/v1/groups \
 
 `status` is `active` when Meta returns a group id immediately, or `pending` when Meta only returns a `request_id`. Store `provider_group_id` — you need it to send messages to the group.
 
+A pending group becomes `active` (with its `provider_group_id` and `invite_link`) when Meta confirms it, or `failed` if Meta could not create it. Joins, leaves, subject and description changes, deletion (`deleted`) and suspension (`suspended`) are applied the same way. Each change also reaches you as the [`group.updated`](/webhooks/events#groups) webhook, and messages sent in a group arrive as `message.received` with `content.group_id`.
+
 If `groups` is off, create returns `422` with a message pointing you to [`GET /v1/capabilities`](/concepts/capabilities).
 
 ## List groups
