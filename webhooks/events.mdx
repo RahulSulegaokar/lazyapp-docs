@@ -37,6 +37,13 @@ Subscribe to what you handle by listing types in `subscribed_events`, or omit it
 | `template.paused` | Paused on quality grounds — temporarily unsendable |
 | `template.disabled` | Disabled after repeated problems |
 | `template.category_changed` | Meta re-categorised it, which changes what you pay |
+| `template.deleted` | Deleted in WhatsApp Manager, found on the next sync |
+
+## Marketing
+
+| Event | When |
+| --- | --- |
+| `marketing.link_clicked` | Someone tapped a link in a marketing message. `data.marketing` has `click_id`, `component` (`cta` or `body`), `product_id`, `clicked_at` and `phone_number_id`. See [marketing messages](/sending/marketing-messages#link-clicks) |
 
 ## Verify
 

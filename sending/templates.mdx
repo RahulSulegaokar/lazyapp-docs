@@ -96,7 +96,9 @@ Rules:
 }
 ```
 
-`header.format` is `NONE`, `TEXT`, `IMAGE`, `VIDEO` or `DOCUMENT`. Button types: `QUICK_REPLY`, `URL`, `PHONE_NUMBER`, `OTP`, `FLOW`. URL buttons must be `https://`.
+`header.format` is `NONE`, `TEXT`, `IMAGE`, `VIDEO`, `GIF`, `DOCUMENT`, `LOCATION` or `PRODUCT`. Button types: `QUICK_REPLY`, `URL`, `PHONE_NUMBER`, `OTP`, `FLOW`, `COPY_CODE`, `CATALOG`, `MPM`, `SPM` and `VOICE_CALL`. URL buttons must be `https://`.
+
+Media headers need a sample for Meta's review: upload it with [`POST /v1/templates/media`](/api-reference/templates/upload-a-header-sample) and pass the handle as `header.example_handle`. Carousels, GIF headers, call buttons, call permission requests, delivery time limits and library templates are on [Template formats](/sending/template-formats).
 
 Authentication templates can pass:
 
@@ -143,7 +145,7 @@ Only `approved` templates can be sent. LazyApp stores lowercase statuses mapped 
 | `paused` | Paused on quality grounds — temporarily unsendable |
 | `disabled` | Disabled by Meta — not sendable |
 | `archived` | Archived at Meta |
-| `deleted` | Deleted locally / pending deletion at Meta |
+| `deleted` | Deleted, here or in WhatsApp Manager |
 
 <Note>
 Meta review usually takes minutes but can take up to 24 hours. Do not poll the list in a tight loop — subscribe to template [webhooks](/webhooks/events).
@@ -159,6 +161,9 @@ Meta review usually takes minutes but can take up to 24 hours. Do not poll the l
 | `template.paused` | Quality pause |
 | `template.disabled` | Disabled after repeated problems |
 | `template.category_changed` | Meta moved category (pricing impact) |
+| `template.deleted` | Deleted in WhatsApp Manager, found on the next sync |
+
+Pausing, categories, groups, comparisons, archiving and copying templates between accounts are on [Managing templates](/sending/template-management).
 
 ## Starter template sets
 
@@ -199,7 +204,7 @@ See [Messages](/sending/messages#types), [Broadcasts](/sending/broadcasts), or [
 | --- | --- |
 | `GET /whatsapp/templates?accountId=` | `GET /v1/templates` (workspace scoped) |
 | Meta `components` on native create | Flat `body_text`, `header`, `buttons` on `/v1/templates` |
-| Template Library API (`library_template_name`, `template-library` lookup) | Create in Meta's library in Business Manager, then `POST /v1/templates/sync` |
+| Template Library API (`library_template_name`, `template-library` lookup) | [`GET /v1/templates/library`](/api-reference/templates/search-the-template-library), then `POST /v1/templates` with `library_template_name` |
 | `whatsapp.template.status_updated` event name | `template.approved`, `template.rejected`, etc. |
 
 ## Related
@@ -207,4 +212,8 @@ See [Messages](/sending/messages#types), [Broadcasts](/sending/broadcasts), or [
 - [Messages](/sending/messages) — send an approved template
 - [Broadcasts](/sending/broadcasts) — marketing templates at scale
 - [Verify](/sending/verify) — prefer this over hand-rolled AUTHENTICATION templates
+- [Template formats](/sending/template-formats) — carousels, GIFs, call buttons and more
+- [Managing templates](/sending/template-management) — quality, groups, comparisons
+- [Marketing messages](/sending/marketing-messages) — Meta's marketing route
+- [Direct Send](/sending/direct-send) — utility messages without templates
 - [Webhooks](/webhooks/events) — template lifecycle events

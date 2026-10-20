@@ -1,0 +1,94 @@
+---
+title: "Direct Send"
+description: "Send utility and login code messages without creating templates first. Meta creates the templates for you."
+---
+
+Normally a business-initiated message needs a template that Meta approved in advance. With **Direct Send**, you send the message text directly and Meta creates the matching template behind the scenes. It suits order updates, delivery notices and login codes whose wording changes often.
+
+<Warning>
+  Direct Send is a Meta programme, not something LazyApp can switch on. Utility messages are generally open to Meta businesses with a messaging limit of 100,000 or unlimited. Login codes are in beta and need an application to Meta. WhatsApp Manager shows a banner when your account is eligible.
+</Warning>
+
+LazyApp finds out from Meta's answer. If Meta replies that Direct Send is not enabled, the send fails with a plain explanation and LazyApp marks Direct Send unavailable on that connection in [capabilities](/concepts/capabilities). Marketing messages never qualify.
+
+## Send a utility message
+
+```bash
+curl https://lazyapp.in/v1/messages/direct-send \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "+919812345670",
+    "category": "utility",
+    "body": "Your order 1042 is out for delivery and arrives by 6 pm.",
+    "template_name": "delivery_update",
+    "ttl_seconds": 3600
+  }'
+```
+
+| Field | What it does |
+| --- | --- |
+| `category` | `utility` or `authentication` |
+| `body` | The message text, up to 1,024 characters |
+| `template_name` | Utility only. Files every message with this name under one template you can recognise, instead of a generated `auto_generated_…` name |
+| `ttl_seconds` | How long WhatsApp keeps trying to deliver. Utility 30 to 43,200 seconds, login codes 30 to 900 |
+| `interactive` | Utility only. Buttons and a media header, below |
+
+The full field list is in the [API reference](/api-reference/messages/send-without-an-approved-template).
+
+## Buttons and media headers
+
+Utility messages can carry one of three kinds of buttons, with an optional text, image, video or document header:
+
+```json
+{
+  "to": "+919812345670",
+  "category": "utility",
+  "body": "Your invoice for October is ready.",
+  "interactive": {
+    "kind": "cta_url",
+    "header": { "type": "document", "link": "https://acme.example/invoices/1042.pdf", "filename": "invoice-1042.pdf" },
+    "cta": { "display_text": "Pay now", "url": "https://acme.example/pay/1042" },
+    "footer": "Acme Billing"
+  }
+}
+```
+
+| `kind` | Shows |
+| --- | --- |
+| `cta_url` | One link button (`cta.display_text`, `cta.url`) |
+| `buttons` | Up to three reply buttons (`buttons[].title`, optional `buttons[].id`) |
+| `voice_call` | A Call on WhatsApp button (`voice_call.display_text`, optional `voice_call.ttl_minutes`). Needs [calling](/guides/calling) on the number |
+
+Media links must be `https`. You can pass an uploaded media `id` instead of `link`.
+
+Meta also describes messages that mix a link button with reply buttons. It has not published that request format, so LazyApp does not offer it yet.
+
+## Login codes
+
+```json
+{
+  "to": "+919812345670",
+  "category": "authentication",
+  "body": "123456 is your Acme login code. It expires in 10 minutes.",
+  "ttl_seconds": 600
+}
+```
+
+Login code messages are text only, need a phone number rather than a business-scoped user ID, and allow at most 900 seconds. For a complete login flow with code checking, use [Verify](/sending/verify).
+
+## Generated templates
+
+Each message creates or reuses a template. They appear on the **Templates** page and in [`GET /v1/templates`](/api-reference/templates/list-templates) after a sync, with `source` set. You cannot edit or delete them, because Meta owns them.
+
+Meta reviews generated templates after sending. If it finds marketing content in utility messages, it can block Direct Send for the account. Sends then fail with error `139200` or `131064`, which LazyApp explains. Keep Direct Send to transactional messages.
+
+## Results
+
+Turn on [template results](/sending/template-management#template-results) to see sends, deliveries and reads per generated template on the Templates page. Using `template_name` keeps related messages under one template, so their results add up.
+
+## Related
+
+- [Messages](/sending/messages)
+- [Templates](/sending/templates)
+- [Verify](/sending/verify)

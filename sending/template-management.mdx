@@ -1,0 +1,120 @@
+---
+title: "Managing templates"
+description: "Keep templates healthy: quality, pausing, categories, groups, comparisons, archiving, login codes in many languages and copying between accounts."
+---
+
+Once a template is approved, Meta keeps watching how people react to it. This page covers what Meta does to live templates and the tools you have to manage them. Everything here is on the **Templates** page in the console, and most of it is also in the API.
+
+## Quality, pacing and pausing
+
+Meta rates each template from the feedback it gets: blocks, reports and how often people read it. The rating is `quality_score` on the [template](/api-reference/templates/retrieve-a-template).
+
+- **Pacing.** A new marketing or utility template, or one without a green rating, may be *paced*. Meta delivers the first part of a big send, waits for feedback, then sends the rest or drops it. A held message has `acceptance_status: "held_for_quality_assessment"`. Dropped messages fail with error `135000`, which LazyApp explains in plain words. Pacing can also apply across all the templates of an account when several get poor feedback.
+- **Pausing.** A template with poor feedback is paused for 3 hours the first time and 6 hours the second. You get `template.paused`. Sends fail with error `132015` while it is paused.
+- **Disabling.** A template paused a third time is disabled for good (error `132016`). Create a new one with different wording.
+
+When a pause ends, Meta does not always unpause the template itself. Click **Unpause** on the template, or call:
+
+```bash
+curl -X POST https://lazyapp.in/v1/templates/order_shipped/unpause \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+## Per-contact marketing limits
+
+WhatsApp limits how many marketing messages one person receives from all businesses, based on how much they engage. A message over the limit fails with error `131049`. Retrying the same person within 24 hours keeps them blocked longer, so LazyApp marks the failure as not retryable. Utility and authentication templates are not affected. A reply from the contact opens a 24-hour window in which your marketing messages do not count towards the limit.
+
+## Categories
+
+Meta checks every template's category. If it decides a utility template is really marketing, it schedules a change:
+
+1. You get a `template.category_changed` webhook, and the template shows `pending_category` with the new category and the date it applies.
+2. On that date the category changes, along with the price per message.
+
+LazyApp shows the upcoming change on the template, and removes a [delivery time limit](/sending/template-formats#delivery-time-limit) that the new category would not allow. To avoid the change, edit the wording so it clearly relates to a transaction the contact made.
+
+## Supported languages
+
+Templates support every language Meta lists, from Afrikaans to Zulu. Use the code in `language`, for example `en_US`, `hi` or `pt_BR`. One template name can exist in many languages; each language is reviewed separately. In the console, **Add a language** on a template copies it into a new language.
+
+## Template results
+
+Meta can report sends, deliveries, reads and link clicks for each template. Turning this on is **permanent**: Meta offers no way to turn it off, and it lets Meta use anonymised message data to improve its services. That is why LazyApp never turns it on for you. A workspace owner turns it on from the **Templates** page by typing a confirmation. There is no API call for it.
+
+Once it is on, you can group and compare templates.
+
+## Template groups
+
+A group is a named set of templates whose results Meta adds up, for example all the versions of your order-update template. In the console, use **Template groups** on the Templates page.
+
+```bash
+curl https://lazyapp.in/v1/template-groups \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Order updates", "templates": ["order_shipped", "order_delivered"] }'
+```
+
+Add or remove templates with `PATCH /v1/template-groups/{group}` and `add_templates` / `remove_templates`. Deleting a group leaves its templates alone.
+
+## Compare two templates
+
+See which of two approved templates gets blocked less over the last 7, 30, 60 or 90 days. On the Templates page, pick **Compare with another** on a template.
+
+```bash
+curl "https://lazyapp.in/v1/templates/order_shipped/compare?compare_with=order_shipped_v2&days=30" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+The answer lists sends, which template has the lower block rate, and the most common reason people blocked each one.
+
+## Archive, unarchive and delete
+
+Archiving hides a template you no longer use without deleting it, and Meta keeps it. Select templates on the Templates page and use **Archive**, **Unarchive** or **Delete**. Meta deletes in bulk too, so a large clean-up is one action.
+
+You cannot reuse an approved template's name for 30 days after deleting it. If someone deletes a template in WhatsApp Manager instead, the next sync marks it deleted here and sends `template.deleted`.
+
+Templates Meta generates for you, such as those created by [Direct Send](/sending/direct-send), cannot be edited or deleted from LazyApp.
+
+## Login codes in many languages
+
+If your app signs people in around the world, you need the same login code template in each of their languages. Create or update all of them at once. On the Templates page, use **Login codes in several languages**.
+
+```bash
+curl https://lazyapp.in/v1/templates/authentication \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "login_code",
+    "languages": ["en_US", "hi", "pt_BR", "es"],
+    "otp_type": "COPY_CODE",
+    "add_security_recommendation": true,
+    "code_expiration_minutes": 10
+  }'
+```
+
+`ONE_TAP` and `ZERO_TAP` also need your Android `package_name` and app `signature_hash`. Meta writes the wording of login code templates itself, so you choose only these settings. The console shows Meta's preview of each language before you create them.
+
+For sending codes and checking them, use [Verify](/sending/verify) rather than building it yourself.
+
+<Tip>
+  If one-tap or zero-tap autofill does not work on an Android phone, WhatsApp writes an error signal to your app's logs that names the cause, such as a wrong signature hash. Meta's [error signals guide](https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/authentication-templates/error-signals) lists them. They appear on the device only, so LazyApp cannot show them.
+</Tip>
+
+## Copy templates from another account
+
+If your business has more than one WhatsApp Business Account, copy approved templates from one to another instead of submitting them again. On the Templates page, use **Copy from another account**.
+
+```bash
+curl https://lazyapp.in/v1/templates/migrate \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "source_waba_id": "104996122399160" }'
+```
+
+Both accounts must belong to the same Meta business. Only approved templates with a green or unknown quality rating can be copied. Then run [`POST /v1/templates/sync`](/api-reference/templates/sync-templates-from-meta).
+
+## Related
+
+- [Templates](/sending/templates)
+- [Template formats](/sending/template-formats)
+- [Webhooks](/webhooks/events)
