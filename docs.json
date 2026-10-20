@@ -41,8 +41,11 @@
               "guides/sandbox",
               "guides/connecting-whatsapp",
               "guides/phone-numbers",
+              "guides/growth-tools",
               "guides/contacts",
+              "guides/identity-and-privacy",
               "guides/inbox",
+              "guides/ad-welcome-messages",
               "guides/flows",
               "guides/groups",
               "guides/calling"
@@ -70,7 +73,13 @@
             "pages": [
               "sending/messages",
               "sending/message-options",
+              "sending/interactive-messages",
+              "sending/read-receipts",
               "sending/templates",
+              "sending/template-formats",
+              "sending/template-management",
+              "sending/marketing-messages",
+              "sending/direct-send",
               "sending/media",
               "sending/catalog",
               "sending/events",
@@ -84,7 +93,8 @@
             "pages": [
               "webhooks/overview",
               "webhooks/verifying",
-              "webhooks/events"
+              "webhooks/events",
+              "webhooks/whatsapp-fields"
             ]
           },
           {

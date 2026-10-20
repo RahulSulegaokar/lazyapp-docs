@@ -38,7 +38,7 @@ curl https://lazyapp.in/v1/capabilities \
 | [`POST /v1/flows/{flow}/publish`](/api-reference/flows/publish-a-flow) | Make sendable |
 | [`POST /v1/flows/{flow}/deprecate`](/api-reference/flows/deprecate-a-flow) | Stop new sends; open sessions continue |
 | [`GET /v1/flows/{flow}/health`](#can-it-be-sent) | Ask Meta whether the flow can be sent, and what blocks it |
-| [`GET /v1/flows/{flow}/endpoint-health`](/api-reference/flows/check-flow-endpoint-health) | Probe the data endpoint |
+| [`GET /v1/flows/{flow}/endpoint-health`](/api-reference/flows/check-data-endpoint-health) | Probe the data endpoint |
 | [`GET /v1/flows/{flow}/responses`](/api-reference/flows/list-flow-responses) | Completion payloads |
 | [`POST /v1/flows/copy`](#copy-flows-from-another-number) | Copy flows from another number's WhatsApp Business account |
 | Send Flow | [`POST /v1/messages`](/sending/messages) with `interactive.type: flow`, or a template with a flow button |
