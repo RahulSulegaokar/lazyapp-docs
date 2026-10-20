@@ -1,0 +1,82 @@
+---
+title: "WhatsApp analytics"
+description: "WhatsApp's own counts of messages, charges, calls, templates and groups for your account."
+---
+
+LazyApp counts every message it sends. WhatsApp keeps its own counts too, and those are what Meta bills. This API reads WhatsApp's numbers for a number's WhatsApp account, so you can check a charge, see how a template performs, or build a report.
+
+WhatsApp's numbers arrive with a delay of up to a few hours and are rounded. For live counts of your own traffic, use `GET /v1/analytics/messaging` (see [message rates](/billing/whatsapp-rates#messaging-analytics)).
+
+## In the console
+
+**Analytics → What WhatsApp counted** shows messages sent and delivered, and charges by category, for the last 7, 30 or 90 days.
+
+## Read a report
+
+```bash
+curl -G "https://lazyapp.in/v1/analytics/whatsapp" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  --data-urlencode "metric=pricing" \
+  --data-urlencode "start=2026-10-01" \
+  --data-urlencode "end=2026-10-19" \
+  --data-urlencode "dimensions[]=pricing_category"
+```
+
+**Scope:** `messages:read`
+
+| Parameter | Notes |
+| --- | --- |
+| `metric` | What to count. See below |
+| `start`, `end` | Dates as `YYYY-MM-DD`, in UTC. `end` is included |
+| `phone_number_id` | Which number's WhatsApp account. Defaults to your default number |
+| `granularity` | `half_hour`, `day`/`daily` or `month`/`monthly` |
+| `phone_numbers[]` | Only these numbers of the account (digits, as Meta shows them) |
+| `country_codes[]` | Two-letter contact countries, e.g. `IN` |
+| `dimensions[]` | Split the counts, e.g. `pricing_category`, `pricing_type`, `country`, `phone` |
+| `metric_types[]` | Which values to return, e.g. `cost`, `volume` |
+| `pricing_categories[]`, `pricing_types[]` | Filters for `pricing` |
+| `product_types[]` | For `messaging`: `0` notifications, `2` customer support, `100` Marketing Messages API |
+| `directions[]` | For `calls`: `USER_INITIATED`, `BUSINESS_INITIATED` |
+| `templates[]` | For `templates`: template names. LazyApp turns them into Meta's ids |
+| `ids[]` | For `templates`, `template_groups` and `groups`: Meta's ids, up to 10 |
+
+| `metric` | Counts |
+| --- | --- |
+| `messaging` | Messages sent and delivered |
+| `pricing` | Delivered messages and what they cost, by category, type, country and tier |
+| `calls` | Calls, their cost and average length |
+| `templates` | Sent, delivered, read, button clicks and cost per template. Needs template insights turned on |
+| `template_groups` | The same per template group |
+| `groups` | Messages, joins and leaves in WhatsApp groups |
+| `conversation` | The old per-conversation counts. Conversations stopped being billed in July 2025, so recent dates return nothing |
+
+The response passes WhatsApp's data points through unchanged:
+
+```json
+{
+  "metric": "pricing",
+  "granularity": "DAILY",
+  "data_points": [
+    { "start": 1759276800, "end": 1759363200, "pricing_category": "MARKETING", "volume": 1240, "cost": 14.2 }
+  ],
+  "waba_id": "102290129340398"
+}
+```
+
+## Turn on template insights
+
+WhatsApp only keeps per-template numbers once template insights are on for the account. **They cannot be turned off again.** In the console, the **Analytics** page offers it to people who can manage templates. Over the API:
+
+```bash
+curl -X POST "https://lazyapp.in/v1/analytics/template-insights" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Idempotency-Key: template-insights-on" \
+  -H "Content-Type: application/json" \
+  -d '{ "confirm": true }'
+```
+
+**Scope:** `templates:write`. Answers `{ "enabled": true, "waba_id": "…" }`.
+
+## Errors
+
+A bad parameter answers `422` with a plain `message`. When WhatsApp refuses or fails, the answer has `message`, `code` (`provider_<code>`) and `retryable`; retryable failures answer `502`.

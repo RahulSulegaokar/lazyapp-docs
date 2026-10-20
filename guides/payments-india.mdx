@@ -1,0 +1,233 @@
+---
+title: "Payments (India)"
+description: "Ask a contact to pay inside WhatsApp, follow the payment, update the order and refund."
+---
+
+WhatsApp payments let a contact pay for an order without leaving the chat. You send an **order details** message: the items, the total and a **Review and pay** button. The contact pays with any UPI app, or through your payment gateway's checkout. LazyApp tracks the payment and tells your app when the money arrives.
+
+<Info>
+WhatsApp payments are for Indian businesses charging in INR. Brazil and Mexico have their own Meta flows that LazyApp does not offer yet. See [other countries](#other-countries).
+</Info>
+
+## Three ways to collect
+
+| `payment.method` | The contact pays with | You need |
+| --- | --- | --- |
+| `payment_gateway` | WhatsApp's own checkout: UPI, cards, netbanking and wallets through your gateway | A payment setup linked to Razorpay, PayU, Zaakpay or BillDesk |
+| `upi_intent_link` | Any UPI app on their phone | A Cashfree account in LazyApp, or a `upi://pay` link your gateway made |
+| `payment_link` | A gateway payment page | A Cashfree or Razorpay account in LazyApp, or a link your gateway made |
+
+`payment_gateway` is the smoothest for the contact. LazyApp reads the result from WhatsApp, and you can look it up or refund it here. The other two are useful when you already use Cashfree or Razorpay, or have no WhatsApp payment setup yet.
+
+## Before you start
+
+1. **Accept WhatsApp's payment terms.** Meta asks the business to accept them in WhatsApp Manager the first time. Until then, payment calls fail with a plain message and a link to the terms.
+2. **Add a payment setup** (for `payment_gateway` or a UPI ID). In the console, open **Payments → Set up payments**. You can also call `POST /v1/payments/configurations`.
+3. **Or add your gateway keys** (for `upi_intent_link` and `payment_link`). Open **Payments → Set up payments → Gateway accounts**, or call `POST /v1/payments/gateway-accounts`.
+
+Your gateway keys belong to your workspace. LazyApp checks them with the gateway, stores them encrypted, and never returns them.
+
+## Payment setups
+
+A payment setup links a WhatsApp account to a payment gateway or a UPI ID. Meta calls it a *payment configuration*.
+
+```bash
+curl -X POST "https://lazyapp.in/v1/payments/configurations" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Idempotency-Key: setup-main-store" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "configuration_name": "main-store",
+    "provider_name": "razorpay",
+    "redirect_url": "https://yourapp.example/payments/linked"
+  }'
+```
+
+**Scope:** `payments:write`
+
+| Field | Notes |
+| --- | --- |
+| `configuration_name` | Letters, numbers, `-` and `_`. You pass it when you send a request |
+| `provider_name` | `razorpay`, `payu`, `zaakpay`, `billdesk` or `upi_vpa` |
+| `merchant_vpa` | Required for `upi_vpa`, e.g. `shop@okaxis` |
+| `merchant_category_code`, `purpose_code` | Optional UPI fields, for `upi_vpa` |
+| `redirect_url` | Where the gateway sends you after linking |
+| `phone_number_id` | Which number's WhatsApp account. Defaults to your default number |
+
+A gateway setup comes back with `status: needs_connecting` and a `link_url`. Open it, sign in to the gateway and approve. Meta then sends LazyApp an update and the setup turns `active`. If the link expires, call `POST /v1/payments/configurations/{id}/link` for a fresh one.
+
+| Call | Does |
+| --- | --- |
+| `GET /v1/payments/configurations?refresh=true` | Lists setups. `refresh=true` reads Meta first |
+| `PATCH /v1/payments/configurations/{id}` | Sets `data_endpoint_url`, for checkout coupons and shipping (Meta enables this per business) |
+| `DELETE /v1/payments/configurations/{id}` | Removes the setup from WhatsApp. Returns `204` |
+
+## Gateway accounts
+
+```bash
+curl -X POST "https://lazyapp.in/v1/payments/gateway-accounts" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Idempotency-Key: cashfree-live" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "cashfree",
+    "label": "Cashfree live",
+    "credentials": { "client_id": "…", "client_secret": "…" }
+  }'
+```
+
+**Scope:** `payments:write`
+
+| `provider` | `credentials` | Collects with |
+| --- | --- | --- |
+| `cashfree` | `client_id`, `client_secret` | `upi_intent_link`, `payment_link` |
+| `razorpay` | `key_id`, `key_secret`, `webhook_secret` | `payment_link` |
+
+Set `is_sandbox: true` for gateway test keys. The response includes a `webhook_url` and a `key_hint` (the last four characters), never the keys. **Add the `webhook_url` in your gateway's dashboard.** That is how LazyApp hears that a UPI or link payment went through. LazyApp checks each gateway webhook's signature before using it.
+
+`GET /v1/payments/gateway-accounts` lists them, and `DELETE /v1/payments/gateway-accounts/{id}` removes one (`204`).
+
+## Ask for payment
+
+```bash
+curl -X POST "https://lazyapp.in/v1/payments" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Idempotency-Key: order-1042" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "+919812345670",
+    "reference_id": "order-1042",
+    "body": "Your order is ready. Tap below to pay.",
+    "items": [
+      { "name": "Cotton tee", "amount": 49900, "quantity": 2, "retailer_id": "sku-tee" }
+    ],
+    "shipping": { "amount": 5000 },
+    "payment": { "method": "payment_gateway", "configuration": "main-store" }
+  }'
+```
+
+**Scope:** `messages:send`
+
+Amounts are in **paise** (`49900` is ₹499). LazyApp works out the subtotal, tax, shipping, discount and total the way Meta checks them, so the request is never refused for a rounding mismatch.
+
+| Field | Notes |
+| --- | --- |
+| `to` | The contact's number with country code |
+| `reference_id` | Your order id. Up to 35 letters, numbers, `_`, `-`, `.`. LazyApp makes one if you leave it out. A reused id is refused before anything is sent |
+| `body`, `footer`, `header_image_url` | The message text and picture |
+| `items[]` | `name`, `amount`, `quantity`, optional `sale_amount`, `retailer_id`, `image_url` |
+| `catalog_id` | Set when the items come from your Meta catalog |
+| `importer`, `items[].country_of_origin` | Required by Meta for physical goods not from a catalog: the importer's name and address and the country of origin. The console remembers your last values |
+| `goods_type` | `physical-goods` (default) or `digital-goods` |
+| `tax`, `shipping`, `discount` | Each `{ "amount": …, "description": … }` |
+| `expires_in_minutes` | 5 to 43,200. After this the contact can no longer pay |
+| `payment.method` | `payment_gateway`, `upi_intent_link` or `payment_link` |
+| `payment.configuration` | The payment setup name, for `payment_gateway` and UPI IDs |
+| `payment.gateway_account` | The gateway account id. LazyApp creates the UPI intent or the payment link with your keys |
+| `payment.upi_intent_link`, `payment.payment_link` | Pass your own instead of a gateway account |
+| `payment.gateway_fields` | Optional gateway extras: Razorpay `receipt` and `notes`, PayU `udf1`–`udf4`, Zaakpay `extra1`/`extra2`, BillDesk `additional_info1`–`7` |
+| `template` | Send as a template, so it reaches contacts outside the 24-hour window. See below |
+| `metadata` | Your own key-value data. Returned on reads and webhooks |
+
+The response is the payment (`201`):
+
+```json
+{
+  "id": "9b1f…",
+  "reference_id": "order-1042",
+  "to": "919812345670",
+  "status": "pending",
+  "payment_status": "pending",
+  "payment_method": "payment_gateway",
+  "payment_configuration": "main-store",
+  "currency": "INR",
+  "total_amount": 104800,
+  "amount_paid": 0,
+  "amount_refunded": 0,
+  "message_id": "4c2e…",
+  "created_at": "2026-10-20T10:00:00+00:00"
+}
+```
+
+### Outside the 24-hour window
+
+Inside the [customer service window](/concepts/glossary#customer-service-window) you can send the request as is. Outside it, use an approved template:
+
+- **Order details template** (default): a template with a **Review and pay** button. Pass `"template": { "name": "order_payment_v1", "language": "en" }`.
+- **Link button** (Enhanced Payment Links): a template whose URL button ends in a variable, for example `https://rzp.io/{{1}}`. Pass `"template": { "name": "pay_link_v1", "style": "link_button" }` with `payment.method: payment_link`. LazyApp fills the button with the end of your payment link, and refuses links that do not start with the button's address. Meta turns Enhanced Payment Links on for each business.
+
+Create these templates with `POST /v1/payments/templates`, or under **Payments → Set up payments → Templates**:
+
+| `kind` | Makes |
+| --- | --- |
+| `order_details` | A template with a **Review and pay** button |
+| `order_status` | A template for order updates (Meta's `ORDER_STATUS` utility type) |
+| `checkout` | A marketing template with a product picture or video (`header_media`, multipart) and a checkout button |
+
+**Scope:** `templates:write`. The template goes to Meta for review like any other.
+
+## After the request
+
+LazyApp updates the payment as soon as WhatsApp or your gateway reports it:
+
+| `payment_status` | Means |
+| --- | --- |
+| `pending` | Waiting for the contact |
+| `captured` | Paid |
+| `failed` | The attempt failed. The contact can try again |
+| `partially_refunded`, `refunded` | Money went back |
+
+A late "pending" never undoes a payment that already arrived.
+
+| Call | Scope | Does |
+| --- | --- | --- |
+| `GET /v1/payments` | `messages:read` | Lists payments, newest first. Filter by `payment_status`, `status`, `to`, `reference_id`. Cursor-paginated |
+| `GET /v1/payments/{id}` | `messages:read` | One payment |
+| `POST /v1/payments/{id}/lookup` | `messages:read` | Asks WhatsApp for the latest state (`payment_gateway` only) |
+| `POST /v1/payments/{id}/refund` | `payments:write` | Refunds `amount` paise, up to what was paid. Optional `speed`: `normal` or `instant` |
+| `POST /v1/payments/{id}/status` | `messages:send` | Tells the contact where the order stands |
+
+### Order status
+
+```bash
+curl -X POST "https://lazyapp.in/v1/payments/9b1f…/status" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Idempotency-Key: order-1042-shipped" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "shipped", "description": "Shipped with Delhivery, AWB 1234" }'
+```
+
+`status` is `processing`, `partially_shipped`, `shipped`, `completed` or `canceled`. WhatsApp only allows forward moves. For example, a `completed` order cannot go back to `shipped`, and a paid order cannot be canceled. LazyApp refuses those before sending, and rolls back if WhatsApp refuses one anyway. Outside the 24-hour window, pass an `order_status` template as `template`.
+
+When a UPI intent payment through your gateway succeeds, LazyApp moves the order to `processing` for you. That is the update WhatsApp needs to show the order as paid.
+
+## Webhooks
+
+| Event | When |
+| --- | --- |
+| `payment.captured` | The contact paid |
+| `payment.failed` | A payment attempt failed |
+| `payment.refunded` | A refund went through |
+| `payment.order_status_updated` | An order status update was sent |
+
+The payload is the payment object above. See [webhook events](/webhooks/events#payments).
+
+## Errors
+
+Payment errors come back as one plain sentence in `message`. When WhatsApp sent a code, `code` is `provider_<code>` and `retryable` says whether trying again can help.
+
+| Code | Means |
+| --- | --- |
+| `provider_134011`, `provider_131005` | The payment terms are not accepted yet. The message has the link |
+| `provider_2046` | That order status move is not allowed |
+| `provider_2047` | The order is already paid, so it cannot be canceled |
+
+Retryable failures answer `502`. Others answer `422`.
+
+## In the console
+
+**Payments** lists every request with its state, lets you send a new one, update the order, check with WhatsApp and refund. In the **Inbox**, pick **Payment request** as the interactive message type to ask the contact you are chatting with. **Payments → Set up payments** holds the payment setups, gateway accounts and templates.
+
+## Other countries
+
+Meta's Brazil flows (Pix, boleto, payment links, one-click card payments) and Mexico flows (cash vouchers, payment accounts, payment links) need a local business and currency. LazyApp bills and sells to Indian businesses in INR, so they are not offered yet.

@@ -1,0 +1,34 @@
+---
+title: "Auto top-up and receipts"
+description: "Top the wallet up from a saved card when it runs low, and download receipts as PDF."
+---
+
+Messages stop when the wallet is empty. Automatic top-up adds money by itself before that happens.
+
+## Automatic top-up
+
+In the console, open **Settings → Billing → Automatic top-up**.
+
+1. **Save a card.** You go to the payment provider's secure page once. LazyApp never sees the card number, only the brand and last four digits.
+2. **Choose when and how much.** For example, add ₹2,000 when the balance falls below ₹500. Each top-up is at least ₹100.
+3. **Turn it on.**
+
+After every message debit, LazyApp checks the balance. When it is below your threshold, LazyApp charges the saved card for your amount in the background. The money arrives the same way as a manual top-up, with a receipt.
+
+Some things to know:
+
+- **One top-up at a time.** Many messages crossing the threshold together cause one charge, not many.
+- **Bank approval.** If your bank asks you to approve the charge (3-D Secure), or refuses it, LazyApp does not retry silently. Your billing contacts get an email asking them to add money by hand, and the next automatic attempt waits a day.
+- **Removing the card** turns automatic top-up off.
+- **Brand customers** do not see this option. Your provider adds credit to your workspace.
+
+There is no API for automatic top-up. It is a setting for the people who pay.
+
+## Receipts
+
+Every top-up has a receipt under **Settings → Billing → Invoices**. Open one and click **Download PDF** for a copy to file or forward to your accountant. The receipt shows who was billed (with GSTIN when you added one), what was paid for, any tax, and the total paid.
+
+## Related
+
+- [Billing overview](/billing/overview)
+- [Pricing details](/billing/pricing-and-tiers)
