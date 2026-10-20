@@ -181,6 +181,7 @@ Send any of these with [`POST /v1/messages`](/api-reference/messages/send-a-mess
 | `cards` | Carousels: one entry per card, with `header_media` (media cards) or `product_retailer_id` and `catalog_id` (product cards), plus `buttons` (link endings by button index) and `quick_replies` (payloads by button index) |
 | `voice_call` | Call on WhatsApp buttons: optional `ttl_minutes` and a `payload` you get back when the contact calls |
 | `tap_target` | Marketing templates without buttons: `url` and `title` to change where a tap on the message goes and what it says |
+| `location` | Location-header templates: `latitude` and `longitude`, optional `name` and `address` of the place shown on the map |
 | `coupon_code`, `offer_expires_at` | Coupon and limited-time offer templates |
 | `product_retailer_id`, `thumbnail_product_retailer_id`, `catalog_id`, `sections` | Catalog and product templates |
 
