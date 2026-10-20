@@ -49,6 +49,7 @@
               "guides/flows",
               "guides/payments-india",
               "guides/whatsapp-analytics",
+              "guides/ad-results",
               "guides/groups",
               "guides/calling"
             ]
@@ -86,6 +87,7 @@
               "sending/direct-send",
               "sending/media",
               "sending/catalog",
+              "sending/catalog-inventory",
               "sending/events",
               "sending/automation-packs",
               "sending/verify",
