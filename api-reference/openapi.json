@@ -285,10 +285,149 @@
                         "type": "string",
                         "maxLength": 32
                       },
+                      "features": {
+                        "type": "object",
+                        "description": "Extra inputs a template needs at send time; the template's `send_features` lists which. LazyApp builds the matching components. See Template formats.",
+                        "properties": {
+                          "cards": {
+                            "type": "array",
+                            "maxItems": 10,
+                            "description": "Carousel templates: one entry per card, in card order. A media carousel takes exactly as many cards as it was approved with; a product carousel 1 to 10.",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "header_media": {
+                                  "type": "string",
+                                  "description": "Media cards: public link or uploaded media id for the card image or video."
+                                },
+                                "product_retailer_id": {
+                                  "type": "string",
+                                  "description": "Product cards: the product's Content ID in Commerce Manager."
+                                },
+                                "catalog_id": {
+                                  "type": "string",
+                                  "description": "Product cards: catalog id. Defaults to the number's catalog."
+                                },
+                                "body": {
+                                  "oneOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  ],
+                                  "description": "Values for the variables in this card's text: in order, or keyed by name on named templates."
+                                },
+                                "buttons": {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "description": "Keyed by button index: the ending of a URL button's link."
+                                },
+                                "quick_replies": {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "description": "Keyed by button index: an optional payload for a quick-reply button, returned on the reply webhook."
+                                }
+                              }
+                            }
+                          },
+                          "voice_call": {
+                            "type": "object",
+                            "description": "Call on WhatsApp buttons.",
+                            "properties": {
+                              "ttl_minutes": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 43200
+                              },
+                              "payload": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "tap_target": {
+                            "type": "object",
+                            "description": "Tappable title override.",
+                            "properties": {
+                              "url": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "location": {
+                            "type": "object",
+                            "description": "Location-header templates.",
+                            "properties": {
+                              "latitude": {
+                                "type": "string"
+                              },
+                              "longitude": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "address": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "coupon_code": {
+                            "type": "string"
+                          },
+                          "offer_expires_at": {
+                            "type": "string",
+                            "description": "Limited-time offer expiry."
+                          },
+                          "product_retailer_id": {
+                            "type": "string",
+                            "description": "Single-product templates."
+                          },
+                          "thumbnail_product_retailer_id": {
+                            "type": "string",
+                            "description": "Catalog templates: the product shown as the thumbnail."
+                          },
+                          "catalog_id": {
+                            "type": "string"
+                          },
+                          "sections": {
+                            "type": "array",
+                            "description": "Multi-product templates: up to 10 sections and 30 products.",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "title": {
+                                  "type": "string"
+                                },
+                                "product_retailer_ids": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
                       "carousel": {
                         "type": "array",
                         "maxItems": 10,
-                        "description": "Media card carousel templates: one entry per card, in order.",
+                        "description": "Older alias for `features.cards`, still accepted: one entry per card, in order, with `media`, `body` and `buttons` (link endings and quick-reply payloads alike). Ignored when `features.cards` is sent.",
                         "items": {
                           "type": "object",
                           "required": [
@@ -314,7 +453,8 @@
                               "description": "Keyed by button index: URL ending, or quick-reply payload."
                             }
                           }
-                        }
+                        },
+                        "deprecated": true
                       },
                       "message_activity_sharing": {
                         "type": "boolean",

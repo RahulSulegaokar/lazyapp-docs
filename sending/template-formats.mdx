@@ -168,8 +168,8 @@ Send any of these with [`POST /v1/messages`](/api-reference/messages/send-a-mess
     ],
     "features": {
       "cards": [
-        { "header_media": "https://acme.example/img/shirts.jpg", "buttons": { "0": "linen" } },
-        { "header_media": "https://acme.example/img/dresses.jpg", "buttons": { "0": "cotton" } }
+        { "header_media": "https://acme.example/img/shirts.jpg", "body": ["linen"], "buttons": { "0": "linen" } },
+        { "header_media": "https://acme.example/img/dresses.jpg", "body": ["cotton"], "buttons": { "0": "cotton" } }
       ]
     }
   }
@@ -178,7 +178,7 @@ Send any of these with [`POST /v1/messages`](/api-reference/messages/send-a-mess
 
 | Key | For |
 | --- | --- |
-| `cards` | Carousels: one entry per card, with `header_media` (media cards) or `product_retailer_id` and `catalog_id` (product cards), plus `buttons` (link endings by button index) and `quick_replies` (payloads by button index) |
+| `cards` | Carousels: one entry per card, with `header_media` (media cards) or `product_retailer_id` and `catalog_id` (product cards), `body` (values for the variables in that card's text, in order or keyed by name), plus `buttons` (link endings by button index) and `quick_replies` (payloads by button index) |
 | `voice_call` | Call on WhatsApp buttons: optional `ttl_minutes` and a `payload` you get back when the contact calls |
 | `tap_target` | Marketing templates without buttons: `url` and `title` to change where a tap on the message goes and what it says |
 | `location` | Location-header templates: `latitude` and `longitude`, optional `name` and `address` of the place shown on the map |

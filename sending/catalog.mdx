@@ -186,9 +186,9 @@ Outside the 24-hour window, products go in [templates](/sending/templates). Crea
 | Catalog | `CATALOG` (no header) | Optional `thumbnail_product_retailer_id` |
 | Multi-product | `MPM` (text header) | `thumbnail_product_retailer_id` and `sections` |
 | Single product | `SPM` (`PRODUCT` header) | `product_retailer_id` |
-| Product card carousel | Cards with a `PRODUCT` header and one `SPM` or URL button | `product_cards`: comma-separated retailer ids, one card each |
+| Product card carousel | Cards with a `PRODUCT` header and one `SPM` or URL button | `cards`: one `{ "product_retailer_id": … }` per card, 1 to 10 |
 
-In the template builder, a product card carousel is a carousel with **Product** as the card type. LazyApp builds each card from the number's catalog.
+In the template builder, a product card carousel is a carousel with **Product** as the card type. LazyApp builds each card from the number's catalog; pass `catalog_id` on a card to use another one. See [Template formats](/sending/template-formats#sending-these-formats) for every card field.
 
 ```json
 {
@@ -197,7 +197,13 @@ In the template builder, a product card carousel is a carousel with **Product** 
   "template": {
     "name": "weekly_picks",
     "language": "en",
-    "features": { "product_cards": "sku-tee, sku-hoodie, sku-cap" }
+    "features": {
+      "cards": [
+        { "product_retailer_id": "sku-tee" },
+        { "product_retailer_id": "sku-hoodie" },
+        { "product_retailer_id": "sku-cap" }
+      ]
+    }
   }
 }
 ```

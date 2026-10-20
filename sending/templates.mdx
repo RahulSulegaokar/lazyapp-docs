@@ -198,9 +198,9 @@ curl -X DELETE https://lazyapp.in/v1/templates/{name_or_uuid} \
 
 See [Messages](/sending/messages#types), [Broadcasts](/sending/broadcasts), or [Events](/sending/events) to pick the template for you.
 
-### Media card carousel templates
+### Carousel templates
 
-Each card of a carousel template needs its own image or video when you send it (the review sample is not reused), plus values for variables in the card text and the ending of any card link. Pass them per card in `template.carousel`, in card order:
+Each card of a carousel template needs its own image or video (or, on a product carousel, its own product) when you send it; the review sample is not reused. Add values for variables in the card text, the ending of any card link and, optionally, a payload for each quick reply. Pass them per card in `template.features.cards`, in card order:
 
 ```json
 {
@@ -212,21 +212,31 @@ Each card of a carousel template needs its own image or video when you send it (
     "components": [
       { "type": "body", "parameters": [{ "type": "text", "text": "Asha" }] }
     ],
-    "carousel": [
-      { "media": "https://acme.example/aloe.jpg", "body": ["Aloe"], "buttons": { "1": "aloe" } },
-      { "media": "1558081531584829", "body": ["Crassula"], "buttons": { "0": "more-crassulas", "1": "crassula" } }
-    ]
+    "features": {
+      "cards": [
+        { "header_media": "https://acme.example/aloe.jpg", "body": ["Aloe"], "buttons": { "1": "aloe" } },
+        { "header_media": "1558081531584829", "body": ["Crassula"], "buttons": { "1": "crassula" }, "quick_replies": { "0": "more-crassulas" } }
+      ]
+    }
   }
 }
 ```
 
 | Card field | Meaning |
 | --- | --- |
-| `media` | A public link or an uploaded media id for the card's image or video. Required |
+| `header_media` | Media cards: a public link or an uploaded media id for the card's image or video. Required |
+| `product_retailer_id` | Product cards: the product's Content ID in Commerce Manager. Required. `catalog_id` is optional and defaults to the number's catalog |
 | `body` | Values for the card text's variables, in order (or keyed by name on named templates) |
-| `buttons` | Keyed by button index: the link ending for a URL button, or an optional payload for a quick reply (it comes back on the reply webhook) |
+| `buttons` | Keyed by button index: the ending of a URL button's link |
+| `quick_replies` | Keyed by button index: an optional payload for a quick reply (it comes back on the reply webhook) |
 
-LazyApp builds Meta's `carousel` component from these and refuses the send with a field-level `422` when a card is missing its media or values. [Broadcasts](/sending/broadcasts) take the same inputs in `variable_map.carousel`, and the campaign form in the console asks for each card.
+LazyApp builds Meta's `carousel` component from these and refuses the send with a field-level `422` when a card is missing its media, product or values. A media carousel takes exactly as many cards as it was approved with; a product carousel can show 1 to 10 products. See [Template formats](/sending/template-formats#sending-these-formats) for every `features` key.
+
+[Broadcasts](/sending/broadcasts) take the same inputs in `variable_map.features.cards`, and the campaign form in the console asks for each card.
+
+<Note>
+`template.carousel` (and `variable_map.carousel` on broadcasts) is an older alias and still accepted: each entry takes `media`, `body` and `buttons` keyed by index, where `buttons` holds link endings and quick-reply payloads alike. When both are sent, `features.cards` wins. Use `features.cards` in new code.
+</Note>
 
 ## What we skip (Zernio-style)
 
