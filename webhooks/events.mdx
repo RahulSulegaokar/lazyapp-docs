@@ -19,8 +19,9 @@ Subscribe to what you handle by listing types in `subscribed_events`, or omit it
 | `message.deleted` | A coexistence revoke deleted a previously stored message. Payload is the original message plus `deleted_at` |
 | `reaction.received` | Someone added or removed an emoji reaction. Also still arrives as `message.received` with `type: reaction` |
 | `conversation.started` | First time this contact opens a thread on a connection (not on reopen) |
+| `address.received` | A contact submitted an India [address form](/sending/interactive-messages#address-messages-india). `data.address.values` has the fields |
 
-`data.message` includes `conversation_id` (`cnv_…`), `metadata` you attached when sending, the `request_id` of the originating API call, `provider_message_id`, and `contact.bsuid` when Meta provides one.
+`data.message` includes `conversation_id` (`cnv_…`), `metadata` you attached when sending, the `request_id` of the originating API call, `provider_message_id`, and `contact.bsuid` when Meta provides one. Messages sent to or received in a [group](/guides/groups) carry `group` (`uuid`, `provider_group_id`) and no `conversation_id`. The first message from someone who tapped a Click-to-WhatsApp ad carries the ad in `content.referral` (see [Ad welcome messages](/guides/ad-welcome-messages)).
 
 <Note>
   These do not arrive in order. A `message.read` may land before the `message.delivered`
@@ -55,6 +56,20 @@ Codes are redacted from all three payloads.
 | `contact.updated` | Contact details or identifiers changed |
 | `contact.opted_in` | Consent recorded |
 | `contact.opted_out` | Opt-out recorded. Stop sending marketing to them |
+| `contact.identity_changed` | With the [identity check](/guides/identity-and-privacy#identity-change-check) on, the person behind this contact's WhatsApp may have changed. Messages to them are held until you acknowledge |
+
+## Groups
+
+| Event | When |
+| --- | --- |
+| `group.created` | Meta created a group (with `invite_link`), or creation failed (`errors`) |
+| `group.updated` | Name, description or photo changed (`changed`, `errors`) |
+| `group.deleted` | A group was deleted |
+| `group.participants_changed` | Someone joined (`added`) or left / was removed (`removed`, `initiated_by`) |
+| `group.join_requested` | Someone asked to join, or cancelled (`cancelled: true`) |
+| `group.suspended` | WhatsApp suspended a group (`suspended: true`) or lifted it |
+
+See [Group chats](/guides/groups).
 
 ## Numbers and connections
 

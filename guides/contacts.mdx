@@ -155,16 +155,14 @@ curl -X PATCH https://lazyapp.in/v1/connections/{connection_uuid}/business-profi
 
 ## Block users
 
-Requires the `block_users` capability on the connection:
-
 ```bash
 curl -X POST https://lazyapp.in/v1/connections/{connection_uuid}/block-users \
   -H "Authorization: Bearer $LAZYAPP_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{ "phone_numbers": ["+919812345670"] }'
+  -d '{ "users": ["+919812345670"] }'
 ```
 
-`DELETE` with the same body unblocks.
+`users` takes phone numbers or BSUIDs. `DELETE` with the same body unblocks, and `GET` lists the block list. Limits, per-person failures and the identity change check are in [Identity, privacy and data](/guides/identity-and-privacy#block-people).
 
 ## What we skip (Zernio-style)
 

@@ -1,0 +1,35 @@
+---
+title: "Read receipts and typing"
+description: "Show blue ticks and a typing indicator for messages a contact sent you."
+---
+
+When you receive a message, you can tell the contact you have seen it (blue ticks) and that a reply is coming ("typing…").
+
+```bash
+curl -X POST https://lazyapp.in/v1/messages/6c1f2a9e-…/read \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "typing": true }'
+```
+
+```json
+{ "uuid": "6c1f2a9e-…", "read": true, "typing": true }
+```
+
+| Field | Meaning |
+| --- | --- |
+| `typing` | Optional. `true` also shows "typing…" until you reply or for up to 25 seconds, whichever comes first |
+
+Use the `uuid` from the `message.received` [webhook](/webhooks/events) (`data.message.uuid`).
+
+## Rules
+
+- Only messages a contact **sent you** can be marked read. Anything else returns `422` with `code: not_inbound`.
+- WhatsApp accepts read receipts for 30 days after a message; older ones return `422` with `code: too_old`.
+- In a 1:1 chat, marking one message read also marks every earlier message read.
+- In a [group](/guides/groups), each message is marked on its own.
+- Only show "typing…" when a reply really is coming. A typing indicator that ends in silence is a poor experience.
+
+The [inbox](/guides/inbox) does this for you: opening a chat marks it read, and starting to type shows the indicator.
+
+If you have an existing Cloud API integration, the [Meta-compatible proxy](/migrating/from-cloud-api) also accepts `{"status": "read", "message_id": "wamid…", "typing_indicator": {"type": "text"}}` on `/meta/whatsapp/{version}/{phone_number_id}/messages`.

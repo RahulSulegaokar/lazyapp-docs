@@ -166,7 +166,7 @@
             }
           },
           "422": {
-            "description": "Validation failed, or the send was refused. Refusals include a stable `code` \u2014 `customer_service_window_closed`, `contact_suppressed`, `marketing_opt_out`, or `no_connection`.",
+            "description": "Validation failed, or the send was refused. Refusals include a stable `code` — `customer_service_window_closed`, `contact_suppressed`, `marketing_opt_out`, or `no_connection`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -276,6 +276,37 @@
                       "category": {
                         "type": "string",
                         "maxLength": 32
+                      },
+                      "carousel": {
+                        "type": "array",
+                        "maxItems": 10,
+                        "description": "Media card carousel templates: one entry per card, in order.",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "media"
+                          ],
+                          "properties": {
+                            "media": {
+                              "type": "string",
+                              "description": "Public link or uploaded media id for the card image or video."
+                            },
+                            "body": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "Values for the card text's variables, in order."
+                            },
+                            "buttons": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "string"
+                              },
+                              "description": "Keyed by button index: URL ending, or quick-reply payload."
+                            }
+                          }
+                        }
                       }
                     }
                   },
@@ -327,7 +358,8 @@
                   },
                   "interactive": {
                     "type": "object",
-                    "properties": {}
+                    "properties": {},
+                    "description": "WhatsApp's interactive object: `button`, `list`, `cta_url`, `location_request_message`, `carousel`, `address_message` (India only), `flow`, catalog and payment types. Button, list, link, location, carousel and address messages are checked against Meta's limits before sending. See the Interactive messages guide."
                   },
                   "reaction": {
                     "type": "object",
@@ -363,6 +395,15 @@
                       "type": "string",
                       "maxLength": 512
                     }
+                  },
+                  "preview_url": {
+                    "type": "boolean",
+                    "description": "Text only. Ask WhatsApp to show a preview of the first link in `body`."
+                  },
+                  "recipient_identity_key_hash": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "description": "Identity change check: deliver only if the contact's identity hash still matches. Defaults to the hash LazyApp stored."
                   }
                 }
               }
@@ -377,7 +418,7 @@
           "Messages"
         ],
         "summary": "Retrieve a message",
-        "description": "Fetch a message by uuid and read its current status from LazyApp's record (`queued` \u2192 `sent` \u2192 `delivered` \u2192 `read` / `played`, or `failed`). Prefer webhooks for production; this endpoint is for confirmation and debugging.\n\n**Required scope:** `messages:read`",
+        "description": "Fetch a message by uuid and read its current status from LazyApp's record (`queued` → `sent` → `delivered` → `read` / `played`, or `failed`). Prefer webhooks for production; this endpoint is for confirmation and debugging.\n\n**Required scope:** `messages:read`",
         "parameters": [
           {
             "name": "message",
@@ -647,7 +688,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -801,7 +842,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -1414,7 +1455,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -1704,7 +1745,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -1729,12 +1770,12 @@
           "Calls"
         ],
         "summary": "List calls",
-        "description": "Newest first. Call history from WhatsApp webhooks \u2014 not a live answer API.\n\n**Required scope:** `messages:read`",
+        "description": "Newest first. Call history from WhatsApp webhooks — not a live answer API.\n\n**Required scope:** `messages:read`",
         "parameters": [
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -2001,7 +2042,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100.",
+            "description": "Page size, 1–100.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -2265,6 +2306,197 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Update a group",
+        "description": "Change the subject and/or description. Meta confirms each part on `group.updated`.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "The group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Group"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "description": "Group uuid or Meta group id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "subject": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2048
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Delete a group",
+        "description": "Deletes the group for everyone, including you. Shows `deleting` until Meta confirms.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Deletion requested."
+          },
+          "404": {
+            "description": "Group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "description": "Group uuid or Meta group id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ]
       }
     },
     "/v1/templates": {
@@ -2330,7 +2562,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -2817,7 +3049,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -3249,7 +3481,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -3641,7 +3873,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -4049,7 +4281,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -4505,7 +4737,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -4676,7 +4908,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -4924,7 +5156,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -5085,7 +5317,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -5255,7 +5487,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -5623,7 +5855,7 @@
           "Capabilities"
         ],
         "summary": "List connection capabilities",
-        "description": "What each connected number supports. Features Meta gates per account \u2014 calling, block lists, India payments \u2014 report `false` until Meta enables them for you, so check here rather than hard-coding assumptions.\n\n**Required scope:** `messages:read`",
+        "description": "What each connected number supports. Features Meta gates per account — calling, block lists, India payments — report `false` until Meta enables them for you, so check here rather than hard-coding assumptions.\n\n**Required scope:** `messages:read`",
         "responses": {
           "200": {
             "description": "Capabilities per connection.",
@@ -6295,7 +6527,7 @@
           "Funding"
         ],
         "summary": "Retrieve account usage",
-        "description": "LazyApp's recorded charges for one WhatsApp Business Account, at most 31 days. Amounts are micro-USD (`total_charge` \u00d7 1,000,000). `time_basis` is `recorded_at`. `charge_scope` is `lazyapp_recorded_charges`. Calling is covered only when every visible account currency is USD.\n\n**Required scope:** `billing:read`",
+        "description": "LazyApp's recorded charges for one WhatsApp Business Account, at most 31 days. Amounts are micro-USD (`total_charge` × 1,000,000). `time_basis` is `recorded_at`. `charge_scope` is `lazyapp_recorded_charges`. Calling is covered only when every visible account currency is USD.\n\n**Required scope:** `billing:read`",
         "parameters": [
           {
             "name": "wabaId",
@@ -6409,7 +6641,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100.",
+            "description": "Page size, 1–100.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -9276,7 +9508,7 @@
           "Messages"
         ],
         "summary": "Download inbound message media",
-        "description": "Returns the bytes of media a contact sent in. Outbound uploads use `POST /v1/media`; this is the other direction.\n\nReturns `409` while the download is still queued \u2014 retry rather than treating it as missing.\n\n**Required scope:** `messages:read`",
+        "description": "Returns the bytes of media a contact sent in. Outbound uploads use `POST /v1/media`; this is the other direction.\n\nReturns `409` while the download is still queued — retry rather than treating it as missing.\n\n**Required scope:** `messages:read`",
         "parameters": [
           {
             "name": "message",
@@ -9359,7 +9591,7 @@
           "Contacts"
         ],
         "summary": "Record contact consent",
-        "description": "Record consent collected outside LazyApp \u2014 for example from a website opt-in box. Marketing broadcasts refuse recipients without granted consent.\n\nGranting marketing consent also lifts a matching suppression.\n\n**Required scope:** `messages:send`",
+        "description": "Record consent collected outside LazyApp — for example from a website opt-in box. Marketing broadcasts refuse recipients without granted consent.\n\nGranting marketing consent also lifts a matching suppression.\n\n**Required scope:** `messages:send`",
         "parameters": [
           {
             "name": "contact",
@@ -9418,12 +9650,12 @@
                   "proof_reference": {
                     "type": "string",
                     "maxLength": 255,
-                    "description": "Where the consent is recorded \u2014 a form id, URL or ticket number."
+                    "description": "Where the consent is recorded — a form id, URL or ticket number."
                   },
                   "captured_by": {
                     "type": "string",
                     "maxLength": 255,
-                    "description": "Who captured it \u2014 a user id or system name."
+                    "description": "Who captured it — a user id or system name."
                   }
                 }
               }
@@ -9622,7 +9854,7 @@
                     },
                     "id": {
                       "type": "string",
-                      "description": "Stable event id for this test payload (`evt_test_\u2026`).",
+                      "description": "Stable event id for this test payload (`evt_test_…`).",
                       "example": "evt_test_9f8b1c2d-4e5f-4a6b-8c7d-0e1f2a3b4c5d"
                     }
                   }
@@ -9770,7 +10002,7 @@
           "Webhooks"
         ],
         "summary": "Rotate a webhook signing secret",
-        "description": "Issues a new signing secret without deleting the endpoint. The new `secret` is shown once \u2014 store it before the response is gone.\n\n**Required scope:** `webhooks:write`",
+        "description": "Issues a new signing secret without deleting the endpoint. The new `secret` is shown once — store it before the response is gone.\n\n**Required scope:** `webhooks:write`",
         "parameters": [
           {
             "name": "webhook",
@@ -9937,14 +10169,38 @@
           "Connections"
         ],
         "summary": "Block users",
-        "description": "Block phone numbers on this connection (requires `block_users` capability).\n\n**Required scope:** `messages:send`",
+        "description": "Block people so they cannot message this number, and you cannot message them. WhatsApp only blocks someone who messaged you in the last 24 hours; up to 1,000 per request, 64,000 on the list. The response lists per-person `failures` with plain messages.\n\n**Required scope:** `messages:send`",
         "responses": {
           "200": {
-            "description": "Blocked.",
+            "description": "Meta's result plus `failures`.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "properties": {
+                    "block_users": {
+                      "type": "object"
+                    },
+                    "failures": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "user": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "code": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "message": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -10018,15 +10274,22 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "phone_numbers"
-                ],
                 "properties": {
                   "phone_numbers": {
                     "type": "array",
                     "items": {
                       "type": "string"
-                    }
+                    },
+                    "description": "Older field; same as `users`."
+                  },
+                  "users": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 1000,
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Phone numbers (E.164) or BSUIDs. Parent BSUIDs are refused by Meta."
                   }
                 }
               }
@@ -10112,21 +10375,114 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "phone_numbers"
-                ],
                 "properties": {
                   "phone_numbers": {
                     "type": "array",
                     "items": {
                       "type": "string"
-                    }
+                    },
+                    "description": "Older field; same as `users`."
+                  },
+                  "users": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 1000,
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Phone numbers (E.164) or BSUIDs. Parent BSUIDs are refused by Meta."
                   }
                 }
               }
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "List blocked users",
+        "description": "One page of the number's block list, read from Meta.\n\n**Required scope:** `messages:read`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "A page of blocked people.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlockedUserList"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "description": "`next_cursor` from the previous page.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
       }
     },
     "/v1/connections/{connection}/business-profile": {
@@ -11880,7 +12236,7 @@
           "Connections"
         ],
         "summary": "List connections",
-        "description": "Every WhatsApp number this key may use, with LazyApp\u2019s stored status, quality and limits. No Meta call.\n\n**Required scope:** `messages:read`",
+        "description": "Every WhatsApp number this key may use, with LazyApp’s stored status, quality and limits. No Meta call.\n\n**Required scope:** `messages:read`",
         "responses": {
           "200": {
             "description": "Connections, default first.",
@@ -11913,7 +12269,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -11938,7 +12294,7 @@
           "Connections"
         ],
         "summary": "Get a connection",
-        "description": "The stored record plus Meta\u2019s live view (display name review, blue tick, phone status), cached for five minutes.\n\n**Required scope:** `messages:read`",
+        "description": "The stored record plus Meta’s live view (display name review, blue tick, phone status), cached for five minutes.\n\n**Required scope:** `messages:read`",
         "parameters": [
           {
             "name": "connection",
@@ -12019,7 +12375,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -12054,7 +12410,7 @@
           "Connections"
         ],
         "summary": "Check sending health",
-        "description": "Meta\u2019s `health_status` for the number: one overall answer (`AVAILABLE`, `LIMITED`, `BLOCKED`) and one entry per node (number, WhatsApp account, business, app) with Meta\u2019s suggested fix. Cached for five minutes.\n\n**Required scope:** `messages:read`",
+        "description": "Meta’s `health_status` for the number: one overall answer (`AVAILABLE`, `LIMITED`, `BLOCKED`) and one entry per node (number, WhatsApp account, business, app) with Meta’s suggested fix. Cached for five minutes.\n\n**Required scope:** `messages:read`",
         "parameters": [
           {
             "name": "connection",
@@ -12135,7 +12491,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -12251,7 +12607,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -12284,7 +12640,7 @@
           "Connections"
         ],
         "summary": "Update the WhatsApp account",
-        "description": "Rename the account (only you see it) or set its time zone using Meta\u2019s numeric `timezone_id`. Meta does not allow a time zone change once a partner credit line pays for the account.\n\n**Required scope:** `connections:write`",
+        "description": "Rename the account (only you see it) or set its time zone using Meta’s numeric `timezone_id`. Meta does not allow a time zone change once a partner credit line pays for the account.\n\n**Required scope:** `connections:write`",
         "parameters": [
           {
             "name": "connection",
@@ -12356,7 +12712,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -12485,7 +12841,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -12631,7 +12987,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -12746,7 +13102,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -12876,7 +13232,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -13002,7 +13358,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -13129,7 +13485,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -13244,7 +13600,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -13299,7 +13655,7 @@
           "Connections"
         ],
         "summary": "Request a new display name",
-        "description": "Sends a new display name for Meta\u2019s review (10 changes per 30 days). Customers keep seeing the old name until it is approved; then register the number again within 14 days.\n\n**Required scope:** `connections:write`",
+        "description": "Sends a new display name for Meta’s review (10 changes per 30 days). Customers keep seeing the old name until it is approved; then register the number again within 14 days.\n\n**Required scope:** `connections:write`",
         "parameters": [
           {
             "name": "connection",
@@ -13383,7 +13739,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -13438,7 +13794,7 @@
           "Connections"
         ],
         "summary": "Upload a profile photo",
-        "description": "Sets the WhatsApp profile photo. JPG or PNG, at least 192 \u00d7 192 pixels, up to 5 MB.\n\n**Required scope:** `connections:write`",
+        "description": "Sets the WhatsApp profile photo. JPG or PNG, at least 192 × 192 pixels, up to 5 MB.\n\n**Required scope:** `connections:write`",
         "parameters": [
           {
             "name": "connection",
@@ -13518,7 +13874,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -13572,7 +13928,7 @@
           "Connections"
         ],
         "summary": "Get blue tick status",
-        "description": "Official Business Account (blue tick) status, plus a checklist of Meta\u2019s requirements LazyApp can see.\n\n**Required scope:** `messages:read`",
+        "description": "Official Business Account (blue tick) status, plus a checklist of Meta’s requirements LazyApp can see.\n\n**Required scope:** `messages:read`",
         "parameters": [
           {
             "name": "connection",
@@ -13644,7 +14000,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -13775,7 +14131,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -13924,7 +14280,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14029,7 +14385,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14170,7 +14526,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14295,7 +14651,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14402,7 +14758,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14507,7 +14863,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14582,7 +14938,7 @@
           "Connections"
         ],
         "summary": "List opt-in links",
-        "description": "In-App Signup links on the number\u2019s WhatsApp account, each with its `wa.me/{number}/signup/{id}` link.\n\n**Required scope:** `messages:read`",
+        "description": "In-App Signup links on the number’s WhatsApp account, each with its `wa.me/{number}/signup/{id}` link.\n\n**Required scope:** `messages:read`",
         "parameters": [
           {
             "name": "connection",
@@ -14654,7 +15010,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14687,7 +15043,7 @@
           "Connections"
         ],
         "summary": "Create an opt-in link",
-        "description": "Creates a link people tap to subscribe inside WhatsApp. Set `accept_terms: true` on your first link to accept Meta\u2019s terms. `{{promo_code}}` is the only placeholder allowed in `confirmation_message`. Not available in the EEA, UK, Brazil, Japan, South Korea, Nigeria, South Africa or Turkey.\n\n**Required scope:** `connections:write`",
+        "description": "Creates a link people tap to subscribe inside WhatsApp. Set `accept_terms: true` on your first link to accept Meta’s terms. `{{promo_code}}` is the only placeholder allowed in `confirmation_message`. Not available in the EEA, UK, Brazil, Japan, South Korea, Nigeria, South Africa or Turkey.\n\n**Required scope:** `connections:write`",
         "parameters": [
           {
             "name": "connection",
@@ -14759,7 +15115,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14931,7 +15287,7 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14988,6 +15344,2261 @@
                       "ACTIVE",
                       "DISABLED"
                     ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/messages/{message}/read": {
+      "post": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Mark a message as read",
+        "description": "Show the contact blue ticks for a message they sent you, and optionally a typing indicator (up to 25 seconds, or until you reply). In 1:1 chats earlier messages are marked read too; in groups each message is marked on its own. WhatsApp accepts read receipts for 30 days.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Marked read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "uuid": {
+                      "type": "string"
+                    },
+                    "read": {
+                      "type": "boolean"
+                    },
+                    "typing": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`not_inbound`: only messages a contact sent can be marked read. `too_old`: older than 30 days.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp refused the receipt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "message",
+            "in": "path",
+            "required": true,
+            "description": "Message uuid.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "typing": {
+                    "type": "boolean",
+                    "description": "Also show \"typing…\"."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/identity-check": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Get the identity check",
+        "description": "Whether the identity change check is on for this number.\n\n**Required scope:** `messages:read`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "The setting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Turn the identity check on or off",
+        "description": "With it on, WhatsApp refuses delivery (error `137000`) when a contact's identity changed, LazyApp holds further sends (`identity_changed`) and fires `contact.identity_changed`.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "The setting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "enabled"
+                ],
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/storage": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Get storage settings",
+        "description": "Where Meta stores this number's message content, read live from Meta.\n\n**Required scope:** `messages:read`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Current setting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageSettings"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Change storage settings",
+        "description": "Switch between default storage, local storage in one country, and no storage. WhatsApp only changes this on an unregistered number, so LazyApp deregisters, changes it and registers again (usually under five minutes). If WhatsApp refuses, the number is registered again with its old setting.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "New setting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageSettings"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mode",
+                  "confirm"
+                ],
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "default",
+                      "local",
+                      "none"
+                    ]
+                  },
+                  "region": {
+                    "type": "string",
+                    "description": "Required for `local`: AU, ID, IN, JP, SG, KR, DE, CH, GB, BR, BH, ZA, AE or CA."
+                  },
+                  "pin": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$",
+                    "description": "The two-step PIN, if LazyApp does not have it."
+                  },
+                  "confirm": {
+                    "type": "boolean",
+                    "description": "Must be `true`; the number is briefly offline."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/welcome-messages": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "List ad welcome messages",
+        "description": "Click-to-WhatsApp welcome message sequences on this number's WhatsApp Business Account.\n\n**Required scope:** `messages:read`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "All sequences.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WelcomeSequence"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Create an ad welcome message",
+        "description": "Use the returned `sequence_id` in Ads Manager (Partner app) or as `partner_app_welcome_message_flow_id` in a Marketing API ad creative.\n\n**Required scope:** `templates:write`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sequence_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WelcomeSequenceInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/welcome-messages/{sequence}": {
+      "put": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Update an ad welcome message",
+        "description": "A sequence used by a running ad cannot be changed.\n\n**Required scope:** `templates:write`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sequence_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sequence",
+            "in": "path",
+            "required": true,
+            "description": "Meta sequence id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WelcomeSequenceInput"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Delete an ad welcome message",
+        "description": "A sequence used by a running ad cannot be deleted.\n\n**Required scope:** `templates:write`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Deleted."
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sequence",
+            "in": "path",
+            "required": true,
+            "description": "Meta sequence id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ]
+      }
+    },
+    "/v1/contacts/{contact}/identity/acknowledge": {
+      "post": {
+        "tags": [
+          "Contacts"
+        ],
+        "summary": "Acknowledge an identity change",
+        "description": "Confirm you re-verified the contact after `contact.identity_changed`. Clears the stored hash so the next message goes without one; WhatsApp's reply teaches the new hash.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Cleared.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "uuid": {
+                      "type": "string"
+                    },
+                    "identity": {
+                      "$ref": "#/components/schemas/ContactIdentity"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Contact not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "contact",
+            "in": "path",
+            "required": true,
+            "description": "Contact uuid, phone number, external id or BSUID.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ]
+      }
+    },
+    "/v1/contacts/{contact}/contact-book": {
+      "get": {
+        "tags": [
+          "Contacts"
+        ],
+        "summary": "Check the contact book",
+        "description": "Whether Meta's contact book holds this contact's phone number (by their BSUID).\n\n**Required scope:** `messages:read`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Presence.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "uuid": {
+                      "type": "string"
+                    },
+                    "bsuid": {
+                      "type": "string"
+                    },
+                    "present": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Contact not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The contact has no BSUID yet, or Meta refused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "contact",
+            "in": "path",
+            "required": true,
+            "description": "Contact uuid, phone number, external id or BSUID.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "connection_uuid",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Contacts"
+        ],
+        "summary": "Remove from the contact book",
+        "description": "Remove the contact from Meta's contact book, for example for a data-deletion request. `204` whether or not an entry existed.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Removed."
+          },
+          "404": {
+            "description": "Contact not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "contact",
+            "in": "path",
+            "required": true,
+            "description": "Contact uuid, phone number, external id or BSUID.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ]
+      }
+    },
+    "/v1/groups/eligibility": {
+      "post": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Check group eligibility",
+        "description": "Groups need an Official Business Account on a Cloud API number. Reads Meta's flag and switches the `groups` and `messages.group` capabilities to match.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string"
+                    },
+                    "eligible": {
+                      "type": "boolean"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "connection_uuid": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/groups/sync": {
+      "post": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Load groups from WhatsApp",
+        "description": "Pull every active group Meta lists for the number into LazyApp.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Count.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "synced": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "connection_uuid": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/groups/{group}/photo": {
+      "post": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Change the group photo",
+        "description": "A square JPEG, at least 192 × 192 pixels, at most 5 MB.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "The group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Group"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "description": "Group uuid or Meta group id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "photo"
+                ],
+                "properties": {
+                  "photo": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/groups/{group}/invite-link": {
+      "get": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Get the invite link",
+        "description": "The link people tap to join.\n\n**Required scope:** `messages:read`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Link.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "invite_link": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "description": "Group uuid or Meta group id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/groups/{group}/invite-link/reset": {
+      "post": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Reset the invite link",
+        "description": "Makes a new link; every old link stops working.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "New link.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "invite_link": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "description": "Group uuid or Meta group id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ]
+      }
+    },
+    "/v1/groups/{group}/participants": {
+      "get": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "List group members",
+        "description": "From Meta's participant webhooks. `refresh=1` re-reads the list from Meta first.\n\n**Required scope:** `messages:read`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "A page of members.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupParticipantList"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "description": "Group uuid or Meta group id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include_left",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Remove group members",
+        "description": "Removed people cannot rejoin with the invite link.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Removal requested."
+          },
+          "404": {
+            "description": "Group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "description": "Group uuid or Meta group id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "users"
+                ],
+                "properties": {
+                  "users": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 8,
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/groups/{group}/join-requests": {
+      "get": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "List join requests",
+        "description": "For groups with `approval_required`. Refreshed from Meta on each call.\n\n**Required scope:** `messages:read`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "A page of requests.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupJoinRequestList"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "description": "Group uuid or Meta group id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "cancelled"
+              ],
+              "default": "pending"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/groups/{group}/join-requests/approve": {
+      "post": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Approve join requests",
+        "description": "Meta answers per request; partial failures are listed in `failed` with a plain message.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupJoinRequestDecision"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "description": "Group uuid or Meta group id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "join_request_ids"
+                ],
+                "properties": {
+                  "join_request_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/groups/{group}/join-requests/reject": {
+      "post": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Reject join requests",
+        "description": "Meta answers per request; partial failures are listed in `failed` with a plain message.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupJoinRequestDecision"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "description": "Group uuid or Meta group id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "join_request_ids"
+                ],
+                "properties": {
+                  "join_request_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/groups/{group}/pins": {
+      "post": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Pin or unpin a message",
+        "description": "Pin for 1–30 days. Only three messages can be pinned; a fourth unpins the oldest.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. `message` says why in plain words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Meta's message id for the pin.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "provider_message_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "description": "Group uuid or Meta group id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "message_id"
+                ],
+                "properties": {
+                  "message_id": {
+                    "type": "string"
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "pin",
+                      "unpin"
+                    ],
+                    "default": "pin"
+                  },
+                  "expiration_days": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 30,
+                    "default": 7
                   }
                 }
               }
@@ -15332,6 +17943,9 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "identity": {
+            "$ref": "#/components/schemas/ContactIdentity"
           }
         }
       },
@@ -17404,7 +20018,16 @@
             "nullable": true
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "pending",
+              "active",
+              "failed",
+              "suspended",
+              "deleting",
+              "deleted"
+            ],
+            "description": "`pending` until Meta confirms creation; `suspended` when WhatsApp suspended the group."
           },
           "total_participant_count": {
             "type": "integer",
@@ -17428,6 +20051,16 @@
             "nullable": true
           },
           "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "last_error": {
+            "type": "object",
+            "nullable": true,
+            "description": "Meta's errors from the last failed create or settings change."
+          },
+          "last_message_at": {
             "type": "string",
             "format": "date-time",
             "nullable": true
@@ -17646,7 +20279,7 @@
       },
       "MetaRefusal": {
         "type": "object",
-        "description": "Meta refused or could not complete a change. `message` is a plain sentence you can show to people; `meta` keeps Meta\u2019s own code for logs and support.",
+        "description": "Meta refused or could not complete a change. `message` is a plain sentence you can show to people; `meta` keeps Meta’s own code for logs and support.",
         "properties": {
           "code": {
             "type": "string",
@@ -17717,7 +20350,7 @@
           },
           "waba_id": {
             "type": "string",
-            "description": "WhatsApp Business Account (Meta\u2019s Messaging account) id."
+            "description": "WhatsApp Business Account (Meta’s Messaging account) id."
           },
           "messaging_account_id": {
             "type": [
@@ -17847,7 +20480,7 @@
                   "object",
                   "null"
                 ],
-                "description": "Meta\u2019s current view, cached for five minutes.",
+                "description": "Meta’s current view, cached for five minutes.",
                 "properties": {
                   "display_name_status": {
                     "type": [
@@ -18372,6 +21005,288 @@
             "items": {
               "$ref": "#/components/schemas/SignupLink"
             }
+          }
+        }
+      },
+      "GroupParticipant": {
+        "type": "object",
+        "properties": {
+          "wa_id": {
+            "type": "string",
+            "nullable": true,
+            "description": "WhatsApp id (phone digits), or BSUID when no number is shared."
+          },
+          "bsuid": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "left",
+              "removed"
+            ]
+          },
+          "joined_via": {
+            "type": "string",
+            "nullable": true,
+            "description": "For example `invite_link`."
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "left_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "GroupParticipantList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupParticipant"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "GroupJoinRequest": {
+        "type": "object",
+        "properties": {
+          "join_request_id": {
+            "type": "string"
+          },
+          "wa_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "bsuid": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "cancelled"
+            ]
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "error_message": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "GroupJoinRequestList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupJoinRequest"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "GroupJoinRequestDecision": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "On approve."
+          },
+          "rejected": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "On reject."
+          },
+          "failed": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "BlockedUserList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "wa_id": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "user_id": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "parent_user_id": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "previous_cursor": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "StorageSettings": {
+        "type": "object",
+        "properties": {
+          "connection_uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "default",
+              "local",
+              "none"
+            ],
+            "description": "`local` keeps message content at rest in one country; `none` keeps nothing at rest (one hour in transit)."
+          },
+          "region": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO country code for local storage."
+          },
+          "retention_minutes": {
+            "type": "integer",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true,
+            "description": "Meta's raw `storage_configuration.status`."
+          },
+          "regions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Countries Meta offers for local storage, code to name. Only on GET."
+          }
+        }
+      },
+      "WelcomeSequence": {
+        "type": "object",
+        "properties": {
+          "sequence_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "prefill": {
+            "type": "string",
+            "nullable": true,
+            "description": "Message typed in the contact's box."
+          },
+          "quick_replies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "in_use": {
+            "type": "boolean",
+            "description": "A running ad uses it; it cannot be changed or deleted."
+          }
+        }
+      },
+      "WelcomeSequenceInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "text"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "prefill": {
+            "type": "string",
+            "maxLength": 1024,
+            "nullable": true
+          },
+          "quick_replies": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "type": "string",
+              "maxLength": 80
+            }
+          }
+        }
+      },
+      "ContactIdentity": {
+        "type": "object",
+        "properties": {
+          "key_hash": {
+            "type": "string",
+            "nullable": true,
+            "description": "The contact's WhatsApp identity hash (identity change check)."
+          },
+          "changed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Set when the identity changed; sends are held until acknowledged."
           }
         }
       }
