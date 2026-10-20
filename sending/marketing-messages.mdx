@@ -1,0 +1,119 @@
+---
+title: "Marketing messages"
+description: "How marketing templates reach customers through Meta's Marketing Messages API: setup, sending options, link clicks, sales tracking, results and price caps."
+---
+
+Meta now delivers marketing templates through its **Marketing Messages API**. Compared with the standard route it picks a better moment to deliver, can improve images and text automatically, reports link clicks and sales, and lets you cap the price per message. Meta is retiring marketing on the standard route, so every business that sends marketing needs this set up.
+
+LazyApp sends every marketing template through the Marketing Messages API once a number is ready, and through the standard route until then. You do not change your API calls.
+
+## Set up
+
+Each number shows its marketing status under **Connections**. Open **Marketing settings** on a number to see what is left to do:
+
+| Status | What it means | What to do |
+| --- | --- | --- |
+| Ready | Marketing goes through the Marketing Messages API | Nothing |
+| Terms not accepted | A Meta business admin has not accepted the marketing terms | Click **Email the terms to my Meta admins**, or accept them in WhatsApp Manager |
+| Payment method needed | The WhatsApp account has no payment method at Meta | Add one in WhatsApp Manager |
+| Not set up | Meta has not reported a status yet | Click **Check with WhatsApp** |
+
+**Email the terms to my Meta admins** asks Meta to email the admins of your Meta business an invitation to accept. Nothing changes until one of them accepts.
+
+## Send
+
+Send marketing templates as usual with [`POST /v1/messages`](/api-reference/messages/send-a-message), [broadcasts](/sending/broadcasts) or the inbox. Two optional fields apply only on the Marketing Messages API:
+
+```json
+{
+  "to": "+919812345670",
+  "type": "template",
+  "template": {
+    "name": "diwali_sale",
+    "language": "en",
+    "message_activity_sharing": true,
+    "max_price_multiplier": 1.5
+  }
+}
+```
+
+| Field | What it does |
+| --- | --- |
+| `template.message_activity_sharing` | Lets Meta use reads and clicks of this message to improve delivery. Omit it to use your account default |
+| `template.max_price_multiplier` | Multiplies the template's [price cap](#price-cap) for this one message, for example to reach a high-value customer |
+
+### Open your app from a button
+
+Marketing URL buttons can open your Android app first and fall back to the Play Store or the website. See [app links](/sending/template-formats#open-your-app-from-a-button).
+
+### Automatic improvements
+
+Meta can brighten images, add a text overlay, animate a picture, add a promotion tag or suggest catalog products to get more clicks. Choose the defaults under **Marketing settings → Advanced → Automatic improvements**, and change them per template in the template builder under **Advanced**. Over the API, pass `creative_features` when you [create a template](/api-reference/templates/create-a-template), for example `{ "image_animation": "OPT_IN" }`.
+
+## Link clicks
+
+When someone taps a link in a marketing message, Meta tells LazyApp. You get a `marketing.link_clicked` [webhook](/webhooks/events):
+
+```json
+{
+  "id": "evt_5c1d...",
+  "type": "marketing.link_clicked",
+  "created_at": "2026-10-20T09:14:05+00:00",
+  "data": {
+    "marketing": {
+      "click_id": "ARAkQ...",
+      "component": "cta",
+      "product_id": null,
+      "clicked_at": "2026-10-20T09:14:03+00:00",
+      "phone_number_id": "106540352242922"
+    }
+  }
+}
+```
+
+`component` is `cta` for a button and `body` for a link in the message text. **Marketing settings** shows the clicks of the last 7 days. Meta only reports clicks for messages sent in the last 7 days, and click reporting is still rolling out, so some accounts do not get it yet.
+
+To stop Meta tracking clicks on a template's URL buttons, turn off **Count link clicks** under **Advanced** in the template builder, or on the template's details, or pass `cta_url_link_tracking_opted_out: true` when you create it.
+
+## Sales and sign-ups
+
+Meta adds a click id, usually as `fbclid`, to links in marketing messages. If your website runs the Meta Pixel or Conversions API, or your app uses the Meta SDK, purchases and sign-ups after a click are credited to the message in Meta's Ads Manager. You do not need to send anything to LazyApp for this.
+
+## Results
+
+Turn on [template results](/sending/template-management#template-results) to see sends, deliveries, reads and clicks for each template on the Templates page. Meta's conversion results (purchases, add to cart) are in Meta Ads Manager.
+
+## Price cap
+
+You can set the most you are willing to pay for each marketing message. Meta then charges that price or less, and delivers only to people it can reach within it. This is a cap per message, not a budget.
+
+1. **Sign the agreement.** Under **Marketing settings → Price cap**, enter who signs for your business and click **Send the agreement**. Meta emails them. Click **Check agreement status** after they accept.
+2. **Estimate.** Under **How many people could you reach?**, pick countries to see how many people Meta could reach at different caps.
+3. **Set the cap.** In the template builder, under **Advanced**, set **Max price per message**. You can add multipliers for particular countries.
+
+Over the API, pass `max_price` when you create a marketing template:
+
+```json
+{
+  "max_price": {
+    "bid_amount": 900,
+    "country_multipliers": { "IN": 1, "BR": 1.4 }
+  }
+}
+```
+
+`bid_amount` is the most you pay per **1,000** delivered messages, in the minor unit of your WhatsApp account's currency. Send `null` for both fields to remove the cap. LazyApp refuses a cap until the agreement is accepted.
+
+## Prices
+
+Meta bills the Marketing Messages API the same way as the standard route: per delivered message, at its rate for the contact's country. See [WhatsApp rates](/billing/whatsapp-rates). A price cap can lower what you pay.
+
+## Only use the Marketing Messages API
+
+Under **Marketing settings → Advanced**, **Only use the Marketing Messages API** makes Meta reject marketing templates sent the standard way from your account, including from other tools connected to it. Sends then fail with error `131063`, which LazyApp explains.
+
+## Related
+
+- [Template formats](/sending/template-formats)
+- [Broadcasts](/sending/broadcasts)
+- [Webhooks](/webhooks/events)

@@ -1,0 +1,194 @@
+---
+title: "Template formats"
+description: "Carousels, GIF headers, call buttons, call permission requests, delivery time limits and ready-made library templates."
+---
+
+Every template has a body. The formats on this page add something around it: a row of cards, a moving header, a button that starts a WhatsApp call, or a limit on how long WhatsApp keeps trying to deliver. You can build all of them in the console under **Templates → New template**, or with [`POST /v1/templates`](/api-reference/templates/create-a-template).
+
+| Format | Categories | What it is for |
+| --- | --- | --- |
+| [Media carousel](#carousels) | Marketing | 2 to 10 swipeable image or video cards, each with its own text and buttons |
+| [Product carousel](#carousels) | Marketing | Swipeable cards that show products from your catalog |
+| [GIF header](#gif-headers) | Marketing | A short looping animation above the text |
+| [Call on WhatsApp button](#call-on-whatsapp-buttons) | Marketing, utility | Lets the contact call you from the message |
+| [Call permission request](#call-permission-requests) | Marketing, utility | Asks the contact if you may call them later |
+| [Delivery time limit](#delivery-time-limit) | All | Stops WhatsApp delivering a message after it is no longer useful |
+| [App links](#open-your-app-from-a-button) | Marketing | A website button that opens your Android app first |
+| [Library templates](#template-library) | Utility, authentication | Ready-made wording Meta approves straight away |
+
+## Header samples
+
+Meta reviews a sample of every image, video, GIF and document header. Upload it first, then pass the returned handle:
+
+```bash
+curl https://lazyapp.in/v1/templates/media \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -F format=IMAGE \
+  -F file=@summer-sale.jpg
+# {"handle":"4::aW1hZ2UvanBlZw==:ARb..."}
+```
+
+Use the handle as `header.example_handle`, or `carousel_cards[].example_handle` for a card. The sample is only for review. You send the real media when you send the template.
+
+Limits: JPEG or PNG images, MP4 video and PDF documents up to 16 MB. A GIF is an MP4 of up to 3.5 MB.
+
+## Carousels
+
+A carousel is a row of cards the contact swipes through. Every card has the same layout: the same header type and the same button types in the same order. Meta rejects carousels whose cards differ.
+
+```json
+{
+  "name": "summer_collection",
+  "language": "en",
+  "category": "MARKETING",
+  "body_text": "Our summer collection is here, {{1}}.",
+  "body_examples": ["Asha"],
+  "carousel_cards": [
+    {
+      "header_format": "IMAGE",
+      "example_handle": "4::aW1hZ2UvanBlZw==:ARb...",
+      "body_text": "Linen shirts from ₹1,499",
+      "buttons": [
+        { "type": "URL", "text": "Shop shirts", "url": "https://acme.example/shirts/{{1}}", "examples": ["https://acme.example/shirts/linen"] },
+        { "type": "QUICK_REPLY", "text": "Not for me" }
+      ]
+    },
+    {
+      "header_format": "IMAGE",
+      "example_handle": "4::aW1hZ2UvanBlZw==:ARc...",
+      "body_text": "Cotton dresses from ₹1,999",
+      "buttons": [
+        { "type": "URL", "text": "Shop dresses", "url": "https://acme.example/dresses/{{1}}", "examples": ["https://acme.example/dresses/cotton"] },
+        { "type": "QUICK_REPLY", "text": "Not for me" }
+      ]
+    }
+  ]
+}
+```
+
+- **Media carousels** take 2 to 10 cards with `header_format` `IMAGE` or `VIDEO`. Card buttons are `QUICK_REPLY`, `URL` or `PHONE_NUMBER`, at most two per card.
+- **Product carousels** use `header_format: "PRODUCT"` and one `SPM` (view product) or `URL` button per card. Meta takes exactly 2 cards when you create one. When you send, you can show up to 10 products. Your connection needs a catalog.
+
+When you send a carousel, pass each card's media or product under `template.features.cards`. A template's `send_features` lists exactly what a send needs. Campaigns and the inbox show one field per card.
+
+## GIF headers
+
+`header.format: "GIF"` shows a short looping animation. It is a marketing-only format that Meta delivers through the [Marketing Messages API](/sending/marketing-messages). Upload the sample with `format=GIF`. The file is an MP4 of up to 3.5 MB.
+
+## Call on WhatsApp buttons
+
+A `VOICE_CALL` button lets the contact start a WhatsApp call to your number straight from the message. Your number needs [calling](/guides/calling) turned on.
+
+```json
+{ "type": "VOICE_CALL", "text": "Call us", "ttl_minutes": 10080 }
+```
+
+`ttl_minutes` sets how long the button works after delivery, from 1 day (1440) to 30 days (43200). Meta's default is 7 days.
+
+## Call permission requests
+
+A call permission request asks the contact whether you may call them on WhatsApp. If they agree, you can call them for a limited time without them calling first.
+
+```json
+{
+  "name": "callback_permission",
+  "language": "en",
+  "category": "UTILITY",
+  "body_text": "Can our team call you about your order {{1}}?",
+  "body_examples": ["1042"],
+  "call_permission_request": true
+}
+```
+
+Meta adds the **Allow** and **Decline** choices itself, so these templates have a body only: no header and no buttons. Marketing and utility templates both work. The contact's answer reaches you as a `call.permission_request` [webhook](/webhooks/events).
+
+## Delivery time limit
+
+If a phone is off, WhatsApp keeps trying to deliver for up to 30 days. That is fine for a newsletter. For a login code or a "your driver is outside" message, a late delivery confuses people. Set `message_send_ttl_seconds` and WhatsApp stops trying after that time:
+
+| Category | Allowed range | Notes |
+| --- | --- | --- |
+| Authentication | 30 to 900 seconds | Meta default is 10 minutes |
+| Utility | 30 to 43,200 seconds (12 hours) | |
+| Marketing | 43,200 to 2,592,000 seconds (12 hours to 30 days) | |
+
+`-1` means 30 days for authentication and utility templates. If Meta moves your template to another category, LazyApp clears the time limit so it never falls outside the new range.
+
+## Open your app from a button
+
+Marketing `URL` buttons can open your Android app first. If the app is not installed, the contact goes to the Play Store or to the link.
+
+```json
+{
+  "type": "URL",
+  "text": "Open the app",
+  "url": "https://acme.example/sale",
+  "app_deep_link": {
+    "android_deep_link": "acme://sale",
+    "android_fallback_playstore_url": "https://play.google.com/store/apps/details?id=example.acme"
+  }
+}
+```
+
+## Template library
+
+Meta keeps a library of ready-made utility and authentication templates, such as order and delivery updates. Library templates are approved straight away because Meta wrote the wording.
+
+```bash
+curl "https://lazyapp.in/v1/templates/library?search=delivery&language=en_US" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+Create one by name. Meta takes the wording from the library, so `body_text` is not needed:
+
+```json
+{
+  "name": "delivery_update",
+  "language": "en_US",
+  "category": "UTILITY",
+  "library_template_name": "delivery_update_1"
+}
+```
+
+In the console, open **Templates → New template** and pick **Ready-made**.
+
+## Sending these formats
+
+Send any of these with [`POST /v1/messages`](/api-reference/messages/send-a-message) and `type: "template"`. Body and header values go in `template.components`, as in any template send. The extra inputs these formats need go in `template.features`, and LazyApp builds the matching components for you. Each template's `send_features` (on [`GET /v1/templates/{template}`](/api-reference/templates/retrieve-a-template)) lists the ones it needs.
+
+```json
+{
+  "to": "+919812345670",
+  "type": "template",
+  "template": {
+    "name": "summer_collection",
+    "language": "en",
+    "components": [
+      { "type": "body", "parameters": [{ "type": "text", "text": "Asha" }] }
+    ],
+    "features": {
+      "cards": [
+        { "header_media": "https://acme.example/img/shirts.jpg", "buttons": { "0": "linen" } },
+        { "header_media": "https://acme.example/img/dresses.jpg", "buttons": { "0": "cotton" } }
+      ]
+    }
+  }
+}
+```
+
+| Key | For |
+| --- | --- |
+| `cards` | Carousels: one entry per card, with `header_media` (media cards) or `product_retailer_id` and `catalog_id` (product cards), plus `buttons` (link endings by button index) and `quick_replies` (payloads by button index) |
+| `voice_call` | Call on WhatsApp buttons: optional `ttl_minutes` and a `payload` you get back when the contact calls |
+| `tap_target` | Marketing templates without buttons: `url` and `title` to change where a tap on the message goes and what it says |
+| `location` | Location-header templates: `latitude` and `longitude`, optional `name` and `address` of the place shown on the map |
+| `coupon_code`, `offer_expires_at` | Coupon and limited-time offer templates |
+| `product_retailer_id`, `thumbnail_product_retailer_id`, `catalog_id`, `sections` | Catalog and product templates |
+
+A GIF header takes a header component of type `gif`: `{ "type": "header", "parameters": [{ "type": "gif", "gif": { "link": "https://acme.example/sale.mp4" } }] }`. The console, campaigns and the inbox ask for the link and build this for you.
+
+## Related
+
+- [Templates](/sending/templates)
+- [Managing templates](/sending/template-management): groups, pausing, comparing and copying
+- [Marketing messages](/sending/marketing-messages)
