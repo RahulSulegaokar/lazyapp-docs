@@ -1,0 +1,254 @@
+---
+title: "Interactive messages"
+description: "Reply buttons, lists, link buttons, location requests, media carousels and India address forms."
+---
+
+Interactive messages give the contact something to tap instead of something to type. They go through [`POST /v1/messages`](/api-reference/messages/send-a-message) with `type: "interactive"` and an `interactive` object in WhatsApp's own shape, so anything from Meta's docs works unchanged.
+
+They are free-form messages, so they only land inside the [24-hour window](/sending/messages#the-24-hour-window). To start a conversation, send a [template](/sending/templates) with buttons instead.
+
+LazyApp checks every limit below **before** sending. A mistake comes back as a `422` with a plain message on the exact field (for example `interactive.action.buttons.1.reply.title`), not as Meta's bare `(#131009) Parameter value is not valid` after the fact.
+
+<Tip>
+  In the console, open a chat in the **Inbox**, click the interactive button in the composer, and pick what you want to send. Every option below has a form there, with counters and the same checks.
+</Tip>
+
+## Pick the right one
+
+| You want the contact to… | Send | Limits |
+| --- | --- | --- |
+| Answer a quick question | [Reply buttons](#reply-buttons) | Up to 3 buttons, 20-character labels |
+| Choose from a menu | [List](#lists) | Up to 10 options in up to 10 sections |
+| Open a web page | [Link button](#link-buttons) | One button |
+| Tell you where they are | [Location request](#location-requests) | Body text only |
+| Browse a few products or offers | [Media carousel](#media-carousels) | 2 to 10 cards |
+| Give you a delivery address (India) | [Address message](#address-messages-india) | India numbers on both sides |
+
+## Reply buttons
+
+```bash
+curl -X POST https://lazyapp.in/v1/messages \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "interactive",
+    "to": "+919812345670",
+    "interactive": {
+      "type": "button",
+      "header": { "type": "image", "image": { "link": "https://acme.example/workshop.png" } },
+      "body": { "text": "Your workshop is at 9am tomorrow. Need to change it?" },
+      "footer": { "text": "Acme Gardens" },
+      "action": {
+        "buttons": [
+          { "type": "reply", "reply": { "id": "change", "title": "Change" } },
+          { "type": "reply", "reply": { "id": "cancel", "title": "Cancel" } }
+        ]
+      }
+    }
+  }'
+```
+
+| Part | Rule |
+| --- | --- |
+| `header` | Optional. `text` (60 characters), or an `image`, `video` or `document` with an uploaded media `id` or a public `link` |
+| `body.text` | Required, 1024 characters |
+| `footer.text` | Optional, 60 characters |
+| `action.buttons` | 1 to 3. Each `reply.id` up to 256 characters, each `reply.title` up to 20. Ids and labels must be different from each other |
+
+When the contact taps, you get `message.received` with `type: interactive` and `content.interactive.button_reply` holding the `id` and `title`.
+
+## Lists
+
+```json
+{
+  "type": "interactive",
+  "to": "+919812345670",
+  "interactive": {
+    "type": "list",
+    "header": { "type": "text", "text": "Shipping" },
+    "body": { "text": "Which shipping option do you prefer?" },
+    "footer": { "text": "Acme" },
+    "action": {
+      "button": "Shipping options",
+      "sections": [
+        {
+          "title": "Fast",
+          "rows": [
+            { "id": "express", "title": "Express", "description": "Next day" }
+          ]
+        },
+        {
+          "title": "Cheaper",
+          "rows": [
+            { "id": "ground", "title": "Ground", "description": "2 to 5 days" }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+| Part | Rule |
+| --- | --- |
+| `header` | Optional, text only, 60 characters |
+| `body.text` | Required, 4096 characters |
+| `action.button` | Required, the label that opens the list, 20 characters |
+| `action.sections` | 1 to 10 sections, each with a `title` (24 characters) |
+| rows | 1 to 10 **across all sections**. `id` up to 200 characters and unique, `title` up to 24, optional `description` up to 72 |
+
+The choice arrives as `content.interactive.list_reply` with the row `id`, `title` and `description`.
+
+## Link buttons
+
+A tidy button instead of a long raw URL in the text.
+
+```json
+{
+  "type": "interactive",
+  "to": "+919812345670",
+  "interactive": {
+    "type": "cta_url",
+    "body": { "text": "See the new dates for the workshop." },
+    "action": {
+      "name": "cta_url",
+      "parameters": { "display_text": "See dates", "url": "https://acme.example/dates?ref=wa" }
+    }
+  }
+}
+```
+
+`header` and `footer` work as for reply buttons. `display_text` is up to 20 characters; `url` must start with `https://` or `http://`.
+
+## Location requests
+
+```json
+{
+  "type": "interactive",
+  "to": "+919812345670",
+  "interactive": {
+    "type": "location_request_message",
+    "body": { "text": "Share your pickup point, or type the address." },
+    "action": { "name": "send_location" }
+  }
+}
+```
+
+The contact's pin comes back as a normal location message: `message.received` with `type: location` and `content.location` (`latitude`, `longitude`, and `name` / `address` when they share them).
+
+## Media carousels
+
+Two to ten cards the contact swipes through, each with a picture or video, short text and a button.
+
+```json
+{
+  "type": "interactive",
+  "to": "+919812345670",
+  "interactive": {
+    "type": "carousel",
+    "body": { "text": "Three new arrivals, each under ₹500:" },
+    "action": {
+      "cards": [
+        {
+          "card_index": 0,
+          "type": "cta_url",
+          "header": { "type": "image", "image": { "link": "https://acme.example/echeveria.jpg" } },
+          "body": { "text": "*Blue Echeveria*\nPowdery blue rosettes." },
+          "action": {
+            "name": "cta_url",
+            "parameters": { "display_text": "Buy now", "url": "https://acme.example/p/echeveria" }
+          }
+        },
+        {
+          "card_index": 1,
+          "type": "cta_url",
+          "header": { "type": "image", "image": { "link": "https://acme.example/haworthia.jpg" } },
+          "body": { "text": "*Zebra Haworthia*\nStriped and compact." },
+          "action": {
+            "name": "cta_url",
+            "parameters": { "display_text": "Buy now", "url": "https://acme.example/p/haworthia" }
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+| Part | Rule |
+| --- | --- |
+| `body.text` | Required, 1024 characters. The carousel itself has no header or footer |
+| `cards` | 2 to 10, numbered from `card_index: 0` in order |
+| card `header` | Required: an `image` or `video` with a public `link` or media `id` |
+| card `body.text` | Optional, 160 characters and at most 2 line breaks |
+| card `action` | Either one link button (`name: cta_url`) **or** quick replies (`buttons` of `type: quick_reply`, up to 3) |
+| matching | Every card must use the same kind and number of buttons |
+
+<Note>
+  Meta's docs set `"type": "cta_url"` on every card, including quick-reply cards. LazyApp's console builder does the same. A tapped quick reply arrives as `content.interactive.button_reply`.
+</Note>
+
+## Address messages (India)
+
+Ask an Indian customer for a delivery address in a WhatsApp form. Only for **India-based businesses messaging customers in India**: LazyApp refuses the send when either number is not `+91` (or the customer's username id does not start with `IN.`), because WhatsApp would drop it anyway.
+
+```json
+{
+  "type": "interactive",
+  "to": "+919812345670",
+  "interactive": {
+    "type": "address_message",
+    "body": { "text": "Thanks for your order! Where should we deliver it?" },
+    "action": {
+      "name": "address_message",
+      "parameters": {
+        "country": "IN",
+        "values": { "name": "Asha Rao", "phone_number": "+919812345670" },
+        "saved_addresses": [
+          {
+            "id": "home",
+            "value": { "name": "Asha Rao", "in_pin_code": "400063", "address": "Wing A, IB Patel Rd", "city": "Mumbai" }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+- `country` must be `IN`.
+- `values` pre-fills the form. `saved_addresses` lets the contact pick an address in one tap. `validation_errors` (field → message) sends the form back with an error under a field, for example a pin code you cannot deliver to.
+- Fields: `name`, `phone_number`, `in_pin_code` (6 digits), `house_number`, `floor_number`, `tower_number`, `building_name`, `address`, `landmark_area`, `city`, `state`.
+
+When the contact submits, two things happen:
+
+1. `message.received` with `content.interactive.nfm_reply` (`name: address_message`).
+2. `address.received` with the parsed address:
+
+```json
+{
+  "type": "address.received",
+  "data": {
+    "address": {
+      "message_uuid": "6c1f…",
+      "contact": "+919812345670",
+      "contact_uuid": "1a2b…",
+      "saved_address_id": "home",
+      "values": { "in_pin_code": "400063", "city": "Mumbai", "address": "Wing A, IB Patel Rd" },
+      "summary": "Asha Rao, 400063, Goregaon…"
+    }
+  }
+}
+```
+
+LazyApp also keeps the latest address on the contact as `attributes.whatsapp_address`, and the inbox offers it as a saved address the next time an agent asks.
+
+If the contact's WhatsApp app cannot show an address form, Meta reports the message as `failed` with code `1026`.
+
+## Other interactive types
+
+`flow`, `catalog_message`, `product`, `product_list`, `order_details`, `order_status`, `call_permission_request` and `contact_information_request` also go under `interactive`. LazyApp passes them to WhatsApp as you send them. See [Flows](/guides/flows), [Catalog](/sending/catalog) and [Calling](/guides/calling).
+
+## Groups
+
+WhatsApp groups do not accept interactive messages. A send to a [group](/guides/groups) with `type: interactive` is refused before it reaches Meta.

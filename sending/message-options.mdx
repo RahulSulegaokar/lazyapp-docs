@@ -37,6 +37,23 @@ API keys can be restricted to specific numbers; using a disallowed id returns `4
 }
 ```
 
+Quoting works with every message type except reactions. WhatsApp leaves the quote off when the original was deleted or is older than about 30 days, and on templates.
+
+## Link previews
+
+WhatsApp can show a preview card for the first `https://` or `http://` link in a text message. Ask for it with `preview_url`:
+
+```json
+{
+  "type": "text",
+  "to": "+919812345670",
+  "body": "Our new range is here: https://acme.example/new",
+  "preview_url": true
+}
+```
+
+The preview comes from the page's Open Graph tags (`og:title`, `og:description`, `og:url`, and an `og:image` under 600 KB, at least 300 px wide). They must sit in the `<head>` within the first 300 KB of the HTML. Without `preview_url`, or when WhatsApp cannot fetch a preview, the link is still tappable. The inbox turns previews on automatically when a reply has a link, with a switch to turn it off.
+
 ## Time-to-live on schedules
 
 With `send_at`, set `ttl_seconds` so a late reminder is dropped instead of arriving hours late. See [scheduling](/sending/messages#scheduling).
@@ -53,7 +70,11 @@ Up to 20 string values. Echoed on webhooks for reconciliation:
 
 ## Interactive shapes
 
-Buttons, lists, CTA URLs, flows, address collection, and catalog / product messages all use `type: interactive` with an `interactive` object. The contact's choice arrives as `message.received`. Details and examples live on [Messages](/sending/messages#types).
+Buttons, lists, link buttons, location requests, media carousels, India address forms, flows and catalog / product messages all use `type: interactive` with an `interactive` object. The contact's choice arrives as `message.received`. Every type, its limits and examples: [Interactive messages](/sending/interactive-messages).
+
+## Identity check
+
+With the identity check on, LazyApp sends the contact's stored identity hash with every message. Pass `recipient_identity_key_hash` to use your own. See [Identity, privacy and data](/guides/identity-and-privacy#identity-change-check).
 
 ## What is not here
 

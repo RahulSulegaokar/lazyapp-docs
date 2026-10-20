@@ -1,0 +1,85 @@
+---
+title: "Ad welcome messages"
+description: "What people see right after tapping your Click-to-WhatsApp ad, and how to tell which ad they came from."
+---
+
+When someone taps a **Click-to-WhatsApp** ad on Facebook or Instagram, WhatsApp opens a chat with your business. A **welcome message** makes that first moment useful instead of an empty chat:
+
+- a greeting (`text`)
+- a message already typed in their box, ready to send (`prefill`)
+- a few quick questions they can tap (`quick_replies`)
+
+You create welcome messages in LazyApp, then pick one when you build the ad.
+
+## Create one
+
+```bash
+curl -X POST https://lazyapp.in/v1/connections/{connection}/welcome-messages \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Driver sign-up",
+    "text": "Hi! Thanks for your interest in driving with Acme. What would you like to know?",
+    "prefill": "Hello! I want to sign up as a driver.",
+    "quick_replies": ["How much can I earn?", "What documents do I need?"]
+  }'
+```
+
+```json
+{ "sequence_id": "186473890" }
+```
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `name` | Yes | Only you see it, when picking it for an ad. Up to 128 characters |
+| `text` | Yes | The greeting. Up to 1024 characters |
+| `prefill` | No | Text placed in their message box |
+| `quick_replies` | No | Up to 5 questions, 80 characters each |
+
+Welcome messages belong to the WhatsApp Business Account of the number you name, and need the `templates:write` scope to change.
+
+## Use it in an ad
+
+- **Ads Manager:** in the ad's **Message template** section, choose **Partner app**, pick your app, then pick the welcome message under **Message sequence**.
+- **Marketing API:** set the id in the ad creative:
+
+```json
+{
+  "asset_feed_spec": {
+    "additional_data": { "partner_app_welcome_message_flow_id": "186473890" }
+  }
+}
+```
+
+## List, change and delete
+
+- `GET /v1/connections/{connection}/welcome-messages` lists them, with `in_use: true` for ones a running ad uses.
+- `PUT /v1/connections/{connection}/welcome-messages/{sequence_id}` changes one (same fields).
+- `DELETE /v1/connections/{connection}/welcome-messages/{sequence_id}` deletes one (`204`).
+
+A welcome message used by a running ad cannot be changed or deleted; remove it from the ad first. LazyApp explains Meta's `4027xxx` errors in plain words.
+
+## Know which ad they came from
+
+The first message from someone who tapped an ad carries the ad in `data.message.content.referral` on `message.received`:
+
+```json
+{
+  "referral": {
+    "source_url": "https://fb.me/…",
+    "source_id": "120208…",
+    "source_type": "ad",
+    "headline": "Earn on your own schedule",
+    "body": "Sign up in 5 minutes",
+    "media_type": "image",
+    "image_url": "https://…",
+    "ctwa_clid": "ARAkL…"
+  }
+}
+```
+
+Use `source_id` (the ad id) and `ctwa_clid` (the click id) to attribute leads and report conversions back to Meta. The inbox shows "From your ad: …" on that message.
+
+## In the console
+
+**WhatsApp numbers** → **Settings** → **Messaging** → **Welcome message for your ads**: create, edit, delete and copy the id of each welcome message.

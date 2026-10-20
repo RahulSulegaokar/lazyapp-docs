@@ -1,0 +1,143 @@
+---
+title: "Identity, privacy and data"
+description: "Usernames and business-scoped user ids, the identity change check, blocking, Meta's contact book, opt-in, and where WhatsApp stores your messages."
+---
+
+## Usernames and business-scoped user ids
+
+WhatsApp is rolling out **usernames**. A contact who adopts one may stop sharing their phone number with businesses they have not talked to recently. To keep every chat working, Meta gives each person a **business-scoped user id** (BSUID), such as `US.13491208655302741918`: a stable id for that person, unique to your business portfolio.
+
+What LazyApp does for you:
+
+- Every message keeps its contact, even when Meta leaves out the phone number. The contact is stored with their BSUID, and their username is shown as their name.
+- When Meta shares a phone number later, it is added to the same contact.
+- When someone changes their phone number, Meta sends a `user_changed_number` (or `user_changed_user_id`) notice with their old and new ids. LazyApp moves the new number and BSUID onto the **same** contact, so history, consent and tags follow them. You get `contact.updated`.
+- Delivery statuses carry the recipient's BSUID, which LazyApp adds to the contact.
+
+Send to a BSUID with `recipient`:
+
+```json
+{ "type": "text", "recipient": { "type": "bsuid", "value": "US.13491208655302741918" }, "body": "Your table is ready." }
+```
+
+Use `"type": "parent_bsuid"` for a parent BSUID (`US.ENT.…`), which works across portfolios enrolled in the same parent account. Authentication templates with one-tap, zero-tap or copy-code buttons need a phone number; Meta refuses them for BSUIDs (error `131062`). To ask a username contact for their number, send a `contact_information_request` [interactive message](/sending/interactive-messages#other-interactive-types).
+
+Webhooks include `contact.bsuid` and `contact.username` on every message.
+
+## Meta's contact book
+
+Meta keeps a **contact book** for your business portfolio: the phone number next to the BSUID, so webhooks keep showing the number after a contact adopts a username. Meta fills it on every chat; you switch the whole feature on or off in Meta Business Suite → Business settings → Business info.
+
+You can check one contact, or remove them (for example for a data-deletion request):
+
+```bash
+curl https://lazyapp.in/v1/contacts/{contact}/contact-book -H "Authorization: Bearer $LAZYAPP_API_KEY"
+# { "uuid": "…", "bsuid": "US.1349…", "present": true }
+
+curl -X DELETE https://lazyapp.in/v1/contacts/{contact}/contact-book -H "Authorization: Bearer $LAZYAPP_API_KEY"
+# 204
+```
+
+The contact needs a BSUID. Meta adds them back the next time you chat. In the console: **Contacts** → row menu → **Remove from WhatsApp contact book**.
+
+## Identity change check
+
+If you share private information on WhatsApp (bank statements, test results, account changes), you need to know when the person behind a number may have changed, for example a recycled SIM. Turn on the **identity check** for the number:
+
+```bash
+curl -X PATCH https://lazyapp.in/v1/connections/{connection}/identity-check \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "enabled": true }'
+```
+
+Then:
+
+1. WhatsApp includes each customer's identity hash in webhooks. LazyApp keeps it on the contact (`identity.key_hash` on [`GET /v1/contacts/{contact}`](/api-reference/contacts/retrieve-a-contact)) and sends it back with every message.
+2. If the identity changed, WhatsApp does **not** deliver the message (status `failed`, code `137000`), or a new message arrives with a different hash. LazyApp marks the contact (`identity.changed_at`) and sends `contact.identity_changed`.
+3. From then on LazyApp holds every message to that contact with `code: identity_changed`, so an automation cannot leak anything while nobody is looking.
+4. Verify the person another way (a call to the number on file, your app). Then acknowledge:
+
+```bash
+curl -X POST https://lazyapp.in/v1/contacts/{contact}/identity/acknowledge -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+The next message goes without a hash, and the new hash is learned from its delivery status.
+
+Callers that keep their own hashes can pass `recipient_identity_key_hash` on [`POST /v1/messages`](/api-reference/messages/send-a-message); it overrides the stored one.
+
+In the console: **WhatsApp numbers** → **Settings** → **Privacy & safety** to turn it on. The inbox shows a warning on an affected chat with an **I've verified them** button.
+
+## Block people
+
+Blocking stops someone from messaging your number, and you from messaging them. Use it for spam or abuse, not for opt-outs.
+
+```bash
+curl -X POST https://lazyapp.in/v1/connections/{connection}/block-users \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "users": ["+919812345670", "IN.88812345678901234"] }'
+```
+
+- Phone numbers and BSUIDs both work. Parent BSUIDs are refused by Meta.
+- WhatsApp only lets you block someone who messaged you in the last 24 hours.
+- Up to 1,000 people per request; the list holds up to 64,000.
+- Meta answers per person. The response lists `failures` with a plain `message`, for example "WhatsApp only lets you block someone who messaged you in the last 24 hours."
+- `DELETE` the same path to unblock. `GET` it to page through the block list (`next_cursor`).
+
+The older `phone_numbers` field still works. Blocking a contact from the console also stops every LazyApp send to them; unblocking lifts it.
+
+## Opt-in
+
+WhatsApp requires opt-in before you message someone. It can be collected anywhere (your website, a form, a call, in person) as long as it clearly names your business and says they will get messages, and you follow local law.
+
+- Record opt-ins you collected elsewhere with [`POST /v1/contacts/{contact}/consent`](/guides/contacts).
+- Contacts who reply with stop words are opted out automatically, and marketing to them is refused (`code: marketing_opt_out`).
+- Ask for opt-in per kind of message (order updates, offers) so people are not surprised, and watch your number's quality rating when you try a new opt-in method.
+
+## Where WhatsApp stores your messages
+
+By default Meta keeps message content in its own data centres for up to 30 days. For regulated businesses, a number can instead use:
+
+| Setting | What it means |
+| --- | --- |
+| **Local storage** | After up to 60 minutes of processing, message content is kept only in the country you choose |
+| **No storage** | Messages and media are kept for at most one hour and never stored at rest |
+
+Local storage countries: Australia (`AU`), Indonesia (`ID`), India (`IN`), Japan (`JP`), Singapore (`SG`), South Korea (`KR`), EU – Germany (`DE`), Switzerland (`CH`), United Kingdom (`GB`), Brazil (`BR`), Bahrain (`BH`), South Africa (`ZA`), United Arab Emirates (`AE`), Canada (`CA`).
+
+```bash
+curl https://lazyapp.in/v1/connections/{connection}/storage -H "Authorization: Bearer $LAZYAPP_API_KEY"
+# { "mode": "default", "region": null, "retention_minutes": null, "status": null, "regions": {…} }
+
+curl -X PUT https://lazyapp.in/v1/connections/{connection}/storage \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "mode": "local", "region": "IN", "confirm": true }'
+```
+
+| Field | Notes |
+| --- | --- |
+| `mode` | `default`, `local` or `none` |
+| `region` | Required for `local` |
+| `pin` | The number's 6-digit two-step PIN, if LazyApp does not have it already |
+| `confirm` | Must be `true` |
+
+<Warning>
+  WhatsApp only changes this while the number is off. LazyApp deregisters the number, changes the setting and registers it again, which Meta says takes under five minutes. Messages sent to you in that time may be delayed. If WhatsApp refuses the change, the number is registered again with its old setting.
+</Warning>
+
+With **no storage**:
+
+- Download media customers send within the hour; after that it is gone.
+- If your webhook endpoint is down for more than an hour, those messages are lost.
+- Media you upload is kept for 24 hours instead of one, so a campaign can reuse an image.
+
+In the console: **WhatsApp numbers** → **Settings** → **Privacy & safety** → **Where messages are stored**.
+
+## Security on the platform
+
+- Messages between WhatsApp and Meta are end-to-end encrypted; Cloud API holds the keys for your number. API calls and webhooks use TLS.
+- LazyApp keeps access tokens and two-step PINs encrypted, and never writes a one-time passcode into webhooks or logs.
+- [WhatsApp Flows](/guides/flows) payloads are encrypted with your number's flow key; LazyApp manages that key for you.
+- See [Security](/security/overview) for how LazyApp protects your workspace.

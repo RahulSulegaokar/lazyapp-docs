@@ -33,8 +33,10 @@ By phone number, in E.164:
 Or by business-scoped user id, when Meta gave you one instead of a number:
 
 ```json
-{ "recipient": { "type": "bsuid", "value": "BSU-..." } }
+{ "recipient": { "type": "bsuid", "value": "US.13491208655302741918" } }
 ```
+
+Or to a WhatsApp group you run, with `"type": "group_id"` (see [Group chats](/guides/groups)). Contacts who adopt a WhatsApp username may only have a BSUID; see [Identity, privacy and data](/guides/identity-and-privacy).
 
 ## Types
 
@@ -144,9 +146,9 @@ Or by business-scoped user id, when Meta gave you one instead of a number:
     }
     ```
 
-    Buttons, lists, call-to-action URLs, flows, address collection,
-    `contact_information_request`, and [catalog / product](/sending/catalog) messages all live under
-    `interactive`. The contact's choice arrives as a `message.received` [webhook](/webhooks/events).
+    Buttons, lists, link buttons, location requests, media carousels, India address forms,
+    flows, `contact_information_request`, and [catalog / product](/sending/catalog) messages all live under
+    `interactive`. See [Interactive messages](/sending/interactive-messages) for every type and its limits. The contact's choice arrives as a `message.received` [webhook](/webhooks/events).
     Cart checkouts arrive as `type: order` with `content.order`.
   </Tab>
 
