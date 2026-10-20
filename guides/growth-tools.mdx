@@ -1,0 +1,93 @@
+---
+title: "QR codes, opt-in links and conversation starters"
+description: "Get people into a WhatsApp chat with you: QR codes with a typed message, opt-in links that subscribe people inside WhatsApp, and ice breakers that suggest what to ask."
+---
+
+Three free tools bring customers to your number. None of them sends a message by itself, so none of them costs anything per use. Find them in the console under **Connections → Settings → Messaging**, or use the API below. Reads need `messages:read`; changes need [`connections:write`](/reference/scopes).
+
+| Tool | Best for | What the customer sees |
+| --- | --- | --- |
+| QR code / short link | Posters, packaging, receipts, websites | A chat with your message already typed, ready to send |
+| Opt-in link | Building a list of people who agreed to hear from you | A consent screen inside WhatsApp, then your thank-you message |
+| Conversation starters | Helping a new customer start | Tappable suggestions and `/commands` in an empty chat |
+
+## QR codes and short links
+
+```bash
+curl -X POST https://lazyapp.in/v1/connections/{uuid}/qr-codes \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"prefilled_message": "Hi Acme, I want to book a table", "image_format": "SVG"}'
+```
+
+```json
+{
+  "code": "4O4YGZEG3RIVE1",
+  "prefilled_message": "Hi Acme, I want to book a table",
+  "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
+  "qr_image_url": "https://scontent.whatsapp.net/..."
+}
+```
+
+- The prefilled message is up to 140 characters. A number can have up to 2,000 codes.
+- `PATCH …/qr-codes/{code}` changes the message; the link and image stay the same, so printed codes keep working.
+- `qr_image_url` is a short-lived Meta link, so download the image when you create it. The console draws a fresh, printable SVG from `deep_link_url` at any time.
+- Meta does not count scans, to protect people's privacy.
+- Opening a link with a typed message hides your ice breakers for that chat.
+
+## Opt-in links (In-App Signup)
+
+An opt-in link is `wa.me/{your number}/signup/{id}`. WhatsApp shows the person your invitation; when they agree, they get your thank-you message, optionally with a promo code. Use it to collect marketing consent inside WhatsApp itself.
+
+```bash
+curl -X POST https://lazyapp.in/v1/connections/{uuid}/signup-links \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "signup_message": "Get order updates and offers on WhatsApp.",
+    "confirmation_message": "Thanks for joining! Your code: {{promo_code}}",
+    "promo_code": "WELCOME10",
+    "privacy_policy_url": "https://acme.example/privacy",
+    "accept_terms": true
+  }'
+```
+
+| Field | Rules |
+| --- | --- |
+| `signup_message` | 1–300 characters, shown on the consent screen. |
+| `confirmation_message` | 1–300 characters. `{{promo_code}}` is the only placeholder, and needs `promo_code`. |
+| `promo_code` | Letters and numbers, up to 50. |
+| `privacy_policy_url` | Required, and cannot be changed later. |
+| `website_url` | Optional, must start with `https://`. |
+| `accept_terms` | Set `true` on your first link to accept Meta's terms. LazyApp handles the "already accepted" case for you. |
+
+Links cannot be deleted. Turn one off with `PATCH …/signup-links/{id}` and `"status": "DISABLED"`; people who tap it see an error until you turn it back on.
+
+<Warning>
+Meta does not offer opt-in links for businesses or people in the EEA, UK, Brazil, Japan, South Korea, Nigeria, South Africa or Turkey. A request from those markets returns `422` with `meta.code: 2494165`.
+</Warning>
+
+## Conversation starters
+
+Ice breakers are up to 4 suggestions (80 characters each) a customer can tap in an empty chat. Commands are up to 30 `/name` shortcuts with a description. Neither may contain emoji.
+
+```bash
+curl -X PUT https://lazyapp.in/v1/connections/{uuid}/conversation-starters \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ice_breakers": ["Track my order", "Talk to a person"],
+    "commands": [{"name": "status", "description": "Check your order status"}],
+    "welcome_message": false
+  }'
+```
+
+The `PUT` replaces everything, so send empty arrays to clear. A tapped ice breaker or command arrives as an ordinary inbound message, so your inbox, automations and [`message.received`](/webhooks/events) webhook handle it like any other.
+
+To see ice breakers yourself, delete your existing chat with the number first; WhatsApp only shows them in a new chat.
+
+## Related
+
+- [Phone numbers](/guides/phone-numbers): health, limits, registration and the blue tick
+- [Contacts](/guides/contacts): recording consent you collect elsewhere
+- [Event reference](/webhooks/events)

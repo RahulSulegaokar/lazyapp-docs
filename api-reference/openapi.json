@@ -87,7 +87,7 @@
     },
     {
       "name": "Connections",
-      "description": "WhatsApp connections: block users, business profile, insights."
+      "description": "Your WhatsApp numbers and the account behind them: health, limits, registration, display name, blue tick, QR codes, conversation starters, opt-in links, business profile and blocked users."
     },
     {
       "name": "Billing",
@@ -11873,6 +11873,3128 @@
           }
         ]
       }
+    },
+    "/v1/connections": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "List connections",
+        "description": "Every WhatsApp number this key may use, with LazyApp\u2019s stored status, quality and limits. No Meta call.\n\n**Required scope:** `messages:read`",
+        "responses": {
+          "200": {
+            "description": "Connections, default first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Get a connection",
+        "description": "The stored record plus Meta\u2019s live view (display name review, blue tick, phone status), cached for five minutes.\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Ask Meta again instead of using the five-minute cache."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The connection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/health": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Check sending health",
+        "description": "Meta\u2019s `health_status` for the number: one overall answer (`AVAILABLE`, `LIMITED`, `BLOCKED`) and one entry per node (number, WhatsApp account, business, app) with Meta\u2019s suggested fix. Cached for five minutes.\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Ask Meta again instead of using the five-minute cache."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Health status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/account": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Get the WhatsApp account",
+        "description": "The WhatsApp Business Account behind the number, and every number on it (`connected` says whether it is already in this workspace).\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Ask Meta again instead of using the five-minute cache."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account and numbers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppAccount"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Update the WhatsApp account",
+        "description": "Rename the account (only you see it) or set its time zone using Meta\u2019s numeric `timezone_id`. Meta does not allow a time zone change once a partner credit line pays for the account.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppAccount"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 255
+                  },
+                  "timezone_id": {
+                    "type": "integer",
+                    "example": 71,
+                    "description": "Meta timezone id, e.g. 71 = Asia/Kolkata."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/account/phone-numbers": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Add a number to the account",
+        "description": "Creates a new number on the same WhatsApp account and a LazyApp connection for it in `phone_registration_pending`. Next: `request-code`, `verify-code`, `register`.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The new connection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Connection"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "country_code",
+                  "phone_number",
+                  "display_name"
+                ],
+                "properties": {
+                  "country_code": {
+                    "type": "string",
+                    "example": "91"
+                  },
+                  "phone_number": {
+                    "type": "string",
+                    "example": "9812345671"
+                  },
+                  "display_name": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 100
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/account/phone-numbers/{phoneNumberId}/connect": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Connect another number on the account",
+        "description": "Brings a number that already exists on the same WhatsApp account into this workspace, using the access LazyApp already has.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          },
+          {
+            "name": "phoneNumberId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The new connection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Connection"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/request-code": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Send a verification code",
+        "description": "Meta texts or calls the number with a 6-digit code. A number that is already verified answers `meta.code` 136024.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Code sent.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string"
+                    },
+                    "code_sent": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code_method": {
+                    "type": "string",
+                    "enum": [
+                      "SMS",
+                      "VOICE"
+                    ]
+                  },
+                  "language": {
+                    "type": "string",
+                    "example": "en_US"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/verify-code": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Verify the code",
+        "description": "Submits the code Meta sent. `123-456` and `123456` both work.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Connection"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "example": "123456"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/register": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Register the number",
+        "description": "Registers the number on the Cloud API with its two-step PIN (or sets a new PIN on a number that has none). Also required after Meta approves a new display name. Meta allows 10 register or deregister calls per number in 72 hours.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Registered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Connection"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "pin"
+                ],
+                "properties": {
+                  "pin": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$",
+                    "example": "212834"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/deregister": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Deregister the number",
+        "description": "Stops the number working on the Cloud API until it is registered again. Not allowed for numbers also used in the WhatsApp Business app.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deregistered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Connection"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/two-step-pin": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Change the two-step PIN",
+        "description": "Sets a new 6-digit two-step verification PIN. There is no way to turn two-step verification off.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PIN changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string"
+                    },
+                    "two_step_pin_set": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "pin"
+                ],
+                "properties": {
+                  "pin": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$",
+                    "example": "212834"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/display-name": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Request a new display name",
+        "description": "Sends a new display name for Meta\u2019s review (10 changes per 30 days). Customers keep seeing the old name until it is approved; then register the number again within 14 days.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Submitted for review.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string"
+                    },
+                    "requested_display_name": {
+                      "type": "string"
+                    },
+                    "requested_display_name_status": {
+                      "type": "string",
+                      "example": "PENDING_REVIEW"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "display_name"
+                ],
+                "properties": {
+                  "display_name": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 100
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/business-profile/photo": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Upload a profile photo",
+        "description": "Sets the WhatsApp profile photo. JPG or PNG, at least 192 \u00d7 192 pixels, up to 5 MB.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Photo updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string"
+                    },
+                    "updated": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "photo"
+                ],
+                "properties": {
+                  "photo": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/official-business-account": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Get blue tick status",
+        "description": "Official Business Account (blue tick) status, plus a checklist of Meta\u2019s requirements LazyApp can see.\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status and eligibility.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfficialBusinessAccount"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Apply for the blue tick",
+        "description": "Submits an Official Business Account request. Supporting links are optional, but Meta wants 5 to 10 when given. A refused request can be sent again after 30 days.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Submitted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string"
+                    },
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "oba_status": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "tracking_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "business_website_url",
+                  "primary_country_of_operation"
+                ],
+                "properties": {
+                  "business_website_url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "primary_country_of_operation": {
+                    "type": "string",
+                    "example": "India"
+                  },
+                  "primary_language": {
+                    "type": "string"
+                  },
+                  "parent_business_or_brand": {
+                    "type": "string"
+                  },
+                  "supporting_links": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  },
+                  "additional_supporting_information": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/qr-codes": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "List QR codes",
+        "description": "QR codes and short links that open a chat with this number and a message already typed (up to 2,000 per number).\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "QR codes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QrCodeList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Create a QR code",
+        "description": "Creates a QR code and short link with a prefilled message of up to 140 characters.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QrCode"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prefilled_message"
+                ],
+                "properties": {
+                  "prefilled_message": {
+                    "type": "string",
+                    "maxLength": 140
+                  },
+                  "image_format": {
+                    "type": "string",
+                    "enum": [
+                      "PNG",
+                      "SVG"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/qr-codes/{code}": {
+      "patch": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Change a QR code message",
+        "description": "Changes the prefilled message; the link and image stay the same.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QrCode"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prefilled_message"
+                ],
+                "properties": {
+                  "prefilled_message": {
+                    "type": "string",
+                    "maxLength": 140
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Delete a QR code",
+        "description": "The link stops working.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/conversation-starters": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Get conversation starters",
+        "description": "Ice breakers (tappable first messages) and slash commands shown in the chat.\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current starters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationStarters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Replace conversation starters",
+        "description": "Replaces all ice breakers (up to 4, 80 characters) and commands (up to 30). No emoji. Send empty arrays to clear.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationStarters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ice_breakers",
+                  "commands",
+                  "welcome_message"
+                ],
+                "properties": {
+                  "ice_breakers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "commands": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "welcome_message": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/signup-links": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "List opt-in links",
+        "description": "In-App Signup links on the number\u2019s WhatsApp account, each with its `wa.me/{number}/signup/{id}` link.\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Opt-in links.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignupLinkList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Create an opt-in link",
+        "description": "Creates a link people tap to subscribe inside WhatsApp. Set `accept_terms: true` on your first link to accept Meta\u2019s terms. `{{promo_code}}` is the only placeholder allowed in `confirmation_message`. Not available in the EEA, UK, Brazil, Japan, South Korea, Nigeria, South Africa or Turkey.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignupLink"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "signup_message",
+                  "confirmation_message",
+                  "privacy_policy_url"
+                ],
+                "properties": {
+                  "signup_message": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "confirmation_message": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "privacy_policy_url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "website_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Must start with https://."
+                  },
+                  "promo_code": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9]{1,50}$"
+                  },
+                  "display_name": {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  "accept_terms": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/signup-links/{signup}": {
+      "patch": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Update an opt-in link",
+        "description": "Change wording, promo code or website, or turn the link off (`status: DISABLED`). Links cannot be deleted, and the privacy policy link cannot change.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          },
+          {
+            "name": "signup",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "updated": {
+                      "type": "boolean"
+                    },
+                    "link": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta\u2019s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "signup_message": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "confirmation_message": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "website_url": {
+                    "type": "string"
+                  },
+                  "promo_code": {
+                    "type": "string"
+                  },
+                  "display_name": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "DISABLED"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -14519,6 +17641,737 @@
           },
           "message": {
             "type": "string"
+          }
+        }
+      },
+      "MetaRefusal": {
+        "type": "object",
+        "description": "Meta refused or could not complete a change. `message` is a plain sentence you can show to people; `meta` keeps Meta\u2019s own code for logs and support.",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "meta_rejected",
+              "meta_permission_missing",
+              "meta_rate_limited",
+              "meta_unavailable",
+              "connection_token_expired"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "example": "This number was registered or deregistered too many times. Meta blocks further attempts for 72 hours."
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "example": 133016
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fbtrace_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "meta"
+        ]
+      },
+      "Connection": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phone_number_id": {
+            "type": "string",
+            "example": "106540352242922"
+          },
+          "display_phone_number": {
+            "type": "string",
+            "example": "+919812345670"
+          },
+          "verified_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Display name customers see."
+          },
+          "waba_id": {
+            "type": "string",
+            "description": "WhatsApp Business Account (Meta\u2019s Messaging account) id."
+          },
+          "messaging_account_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "live",
+              "test"
+            ]
+          },
+          "is_default": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "attention_required",
+              "disconnected",
+              "revoked",
+              "phone_registration_pending",
+              "signup_started",
+              "code_exchange_pending",
+              "asset_discovery",
+              "webhook_subscription_pending",
+              "authorization_received",
+              "draft"
+            ]
+          },
+          "connected_via": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "embedded_signup",
+              "manual",
+              "platform_sync",
+              "platform_claim",
+              null
+            ]
+          },
+          "coexistence": {
+            "type": "boolean",
+            "description": "Also used in the WhatsApp Business app (fixed 20 messages a second)."
+          },
+          "quality_rating": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "GREEN"
+          },
+          "messaging_limit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "TIER_2K",
+            "description": "Shared by every number in the business portfolio."
+          },
+          "throughput_level": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "STANDARD"
+          },
+          "code_verification_status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "VERIFIED"
+          },
+          "registration_status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "registered",
+              "deregistered",
+              "pending",
+              null
+            ]
+          },
+          "two_step_pin_set": {
+            "type": "boolean"
+          },
+          "marketing_messages_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "ConnectionDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Connection"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "live": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "Meta\u2019s current view, cached for five minutes.",
+                "properties": {
+                  "display_name_status": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "example": "APPROVED"
+                  },
+                  "requested_display_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "requested_display_name_status": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "example": "PENDING_REVIEW"
+                  },
+                  "phone_status": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "example": "CONNECTED"
+                  },
+                  "platform_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "example": "CLOUD_API"
+                  },
+                  "is_official_business_account": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "business_verification_status": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "example": "verified"
+                  },
+                  "account_review_status": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "account_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "timezone": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "example": "Asia/Kolkata"
+                  }
+                }
+              },
+              "live_error": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "ConnectionList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Connection"
+            }
+          }
+        }
+      },
+      "HealthStatus": {
+        "type": "object",
+        "properties": {
+          "connection_uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "can_send_message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "AVAILABLE",
+              "LIMITED",
+              "BLOCKED",
+              null
+            ]
+          },
+          "entities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "entity_type": {
+                  "type": "string",
+                  "enum": [
+                    "PHONE_NUMBER",
+                    "WABA",
+                    "BUSINESS",
+                    "APP",
+                    "MESSAGE_TEMPLATE"
+                  ]
+                },
+                "id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "can_send_message": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "can_receive_call_sip": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "additional_info": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "errors": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "error_code": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      },
+                      "error_description": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "possible_solution": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WhatsAppAccount": {
+        "type": "object",
+        "properties": {
+          "connection_uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "account": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "timezone_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "example": "71"
+              },
+              "timezone_name": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "example": "Asia/Kolkata"
+              },
+              "currency": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "country": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "account_review_status": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "business_verification_status": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ownership_type": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "primary_business_location": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "message_template_namespace": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "phone_numbers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "display_phone_number": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "verified_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "quality_rating": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "code_verification_status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name_status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "platform_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "throughput_level": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "connected": {
+                  "type": "boolean",
+                  "description": "Already a connection in this workspace."
+                }
+              }
+            }
+          }
+        }
+      },
+      "OfficialBusinessAccount": {
+        "type": "object",
+        "properties": {
+          "connection_uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "oba_status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "NOT_STARTED"
+          },
+          "status_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "eligibility": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "enum": [
+                    "business_verified",
+                    "two_step",
+                    "display_name",
+                    "thirty_days",
+                    "not_business_app"
+                  ]
+                },
+                "label": {
+                  "type": "string"
+                },
+                "met": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "`null` when LazyApp cannot tell."
+                }
+              }
+            }
+          }
+        }
+      },
+      "QrCode": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "4O4YGZEG3RIVE1"
+          },
+          "prefilled_message": {
+            "type": "string",
+            "maxLength": 140
+          },
+          "deep_link_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://wa.me/message/4O4YGZEG3RIVE1"
+          },
+          "qr_image_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "description": "Only on create; a short-lived Meta link."
+          }
+        }
+      },
+      "QrCodeList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QrCode"
+            }
+          }
+        }
+      },
+      "ConversationStarters": {
+        "type": "object",
+        "properties": {
+          "connection_uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ice_breakers": {
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "commands": {
+            "type": "array",
+            "maxItems": 30,
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "maxLength": 32
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 256
+                }
+              }
+            }
+          },
+          "welcome_message": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SignupLink": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "9876543210123456"
+          },
+          "display_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "signup_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "confirmation_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "privacy_policy_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "promo_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "website_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "ACTIVE",
+              "DISABLED",
+              null
+            ]
+          },
+          "link": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://wa.me/919812345670/signup/9876543210123456"
+          }
+        }
+      },
+      "SignupLinkList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SignupLink"
+            }
           }
         }
       }
