@@ -166,7 +166,7 @@
             }
           },
           "422": {
-            "description": "Validation failed, or the send was refused. Refusals include a stable `code` \u2014 `customer_service_window_closed`, `contact_suppressed`, `marketing_opt_out`, or `no_connection`.",
+            "description": "Validation failed, or the send was refused. Refusals include a stable `code` — `customer_service_window_closed`, `contact_suppressed`, `marketing_opt_out`, or `no_connection`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -377,7 +377,7 @@
           "Messages"
         ],
         "summary": "Retrieve a message",
-        "description": "Fetch a message by uuid and read its current status from LazyApp's record (`queued` \u2192 `sent` \u2192 `delivered` \u2192 `read` / `played`, or `failed`). Prefer webhooks for production; this endpoint is for confirmation and debugging.\n\n**Required scope:** `messages:read`",
+        "description": "Fetch a message by uuid and read its current status from LazyApp's record (`queued` → `sent` → `delivered` → `read` / `played`, or `failed`). Prefer webhooks for production; this endpoint is for confirmation and debugging.\n\n**Required scope:** `messages:read`",
         "parameters": [
           {
             "name": "message",
@@ -647,7 +647,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -801,7 +801,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -1414,7 +1414,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -1704,7 +1704,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -1729,12 +1729,12 @@
           "Calls"
         ],
         "summary": "List calls",
-        "description": "Newest first. Call history from WhatsApp webhooks \u2014 not a live answer API.\n\n**Required scope:** `messages:read`",
+        "description": "Newest first. Call history from WhatsApp webhooks — not a live answer API.\n\n**Required scope:** `messages:read`",
         "parameters": [
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -1798,8 +1798,8 @@
         "tags": [
           "Calls"
         ],
-        "summary": "Request call permission",
-        "description": "Send a WhatsApp call-permission request, or record a local business-initiated stub.\n\n`type` defaults to `call_permission_request`. That sends the permission prompt and returns `kind: call_permission_request`.\n\n`type: business_initiated` stores a local stub row and returns `kind: business_initiated`. It does not place a live call.\n\nRequires `calling: true` on the connection. Otherwise the response is `422` with `code` `capability_unavailable`.\n\n**Required scope:** `messages:send`",
+        "summary": "Start a call or ask permission to call",
+        "description": "Two kinds of request.\n\n`type: call_permission_request` (the default) sends the WhatsApp prompt asking the person whether you may call them. Their answer arrives as the `call.permission_request` webhook.\n\n`type: business_initiated` places a call. Send the SDP offer your WebRTC client built in `sdp_offer`; Meta's SDP answer arrives on the calls webhook and shows as `session` on [`GET /v1/calls/{call}`](#tag/calls). Without the person's permission the response is `422` with `code` `call_permission_missing`.\n\nRequires `calling: true` on the connection, otherwise `422` with `code` `capability_unavailable`.\n\n**Required scope:** `messages:send`",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -1848,6 +1848,23 @@
                     "type": "string",
                     "format": "uuid",
                     "nullable": true
+                  },
+                  "sdp_offer": {
+                    "type": "string",
+                    "maxLength": 20000,
+                    "description": "Required for `business_initiated`. RFC 8866 SDP offer: Opus 48 kHz, ptime 20, one audio SSRC."
+                  },
+                  "biz_opaque_callback_data": {
+                    "type": "string",
+                    "maxLength": 512,
+                    "nullable": true,
+                    "description": "Your own tracking data, echoed on call webhooks."
+                  },
+                  "recording": {
+                    "$ref": "#/components/schemas/CallRecordingOptions"
+                  },
+                  "transcription": {
+                    "$ref": "#/components/schemas/CallRecordingOptions"
                   }
                 }
               }
@@ -1856,7 +1873,7 @@
         },
         "responses": {
           "201": {
-            "description": "Permission request accepted, or a local business-initiated stub stored.",
+            "description": "Permission request sent, or call placed and ringing.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2001,7 +2018,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100.",
+            "description": "Page size, 1–100.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -2330,7 +2347,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -2817,7 +2834,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -3249,7 +3266,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -3641,7 +3658,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -4049,7 +4066,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -4249,6 +4266,218 @@
             }
           }
         ]
+      },
+      "put": {
+        "tags": [
+          "Flows"
+        ],
+        "summary": "Update a draft flow",
+        "description": "Replace a draft's name, categories, Flow JSON or data endpoint. Published flows answer `422` with `code` `flow_not_editable`: duplicate them instead.\n\n**Required scope:** `flows:write`",
+        "parameters": [
+          {
+            "name": "flow",
+            "in": "path",
+            "required": true,
+            "description": "Flow uuid or Meta flow id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "categories": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 64
+                    }
+                  },
+                  "flow_json": {
+                    "description": "The Flow JSON document, as an object or string."
+                  },
+                  "data_endpoint_uri": {
+                    "type": "string",
+                    "maxLength": 2048,
+                    "description": "Must be https."
+                  },
+                  "public_key": {
+                    "type": "string",
+                    "maxLength": 8192
+                  }
+                },
+                "required": [
+                  "name",
+                  "categories",
+                  "flow_json"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "The updated flow.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid Flow JSON, or the flow is not a draft.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Flows"
+        ],
+        "summary": "Delete a draft flow",
+        "description": "Deletes a draft at Meta and in LazyApp. Published flows answer `422` with `code` `flow_not_deletable`: deprecate them instead.\n\n**Required scope:** `flows:write`",
+        "parameters": [
+          {
+            "name": "flow",
+            "in": "path",
+            "required": true,
+            "description": "Flow uuid or Meta flow id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Deleted."
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a draft.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/flows/{flow}/publish": {
@@ -4505,7 +4734,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -4676,7 +4905,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -4924,7 +5153,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -5085,7 +5314,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -5255,7 +5484,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100. Defaults to 25.",
+            "description": "Page size, 1–100. Defaults to 25.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -5623,7 +5852,7 @@
           "Capabilities"
         ],
         "summary": "List connection capabilities",
-        "description": "What each connected number supports. Features Meta gates per account \u2014 calling, block lists, India payments \u2014 report `false` until Meta enables them for you, so check here rather than hard-coding assumptions.\n\n**Required scope:** `messages:read`",
+        "description": "What each connected number supports. Features Meta gates per account — calling, block lists, India payments — report `false` until Meta enables them for you, so check here rather than hard-coding assumptions.\n\n**Required scope:** `messages:read`",
         "responses": {
           "200": {
             "description": "Capabilities per connection.",
@@ -6295,7 +6524,7 @@
           "Funding"
         ],
         "summary": "Retrieve account usage",
-        "description": "LazyApp's recorded charges for one WhatsApp Business Account, at most 31 days. Amounts are micro-USD (`total_charge` \u00d7 1,000,000). `time_basis` is `recorded_at`. `charge_scope` is `lazyapp_recorded_charges`. Calling is covered only when every visible account currency is USD.\n\n**Required scope:** `billing:read`",
+        "description": "LazyApp's recorded charges for one WhatsApp Business Account, at most 31 days. Amounts are micro-USD (`total_charge` × 1,000,000). `time_basis` is `recorded_at`. `charge_scope` is `lazyapp_recorded_charges`. Calling is covered only when every visible account currency is USD.\n\n**Required scope:** `billing:read`",
         "parameters": [
           {
             "name": "wabaId",
@@ -6409,7 +6638,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Page size, 1\u2013100.",
+            "description": "Page size, 1–100.",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -9276,7 +9505,7 @@
           "Messages"
         ],
         "summary": "Download inbound message media",
-        "description": "Returns the bytes of media a contact sent in. Outbound uploads use `POST /v1/media`; this is the other direction.\n\nReturns `409` while the download is still queued \u2014 retry rather than treating it as missing.\n\n**Required scope:** `messages:read`",
+        "description": "Returns the bytes of media a contact sent in. Outbound uploads use `POST /v1/media`; this is the other direction.\n\nReturns `409` while the download is still queued — retry rather than treating it as missing.\n\n**Required scope:** `messages:read`",
         "parameters": [
           {
             "name": "message",
@@ -9359,7 +9588,7 @@
           "Contacts"
         ],
         "summary": "Record contact consent",
-        "description": "Record consent collected outside LazyApp \u2014 for example from a website opt-in box. Marketing broadcasts refuse recipients without granted consent.\n\nGranting marketing consent also lifts a matching suppression.\n\n**Required scope:** `messages:send`",
+        "description": "Record consent collected outside LazyApp — for example from a website opt-in box. Marketing broadcasts refuse recipients without granted consent.\n\nGranting marketing consent also lifts a matching suppression.\n\n**Required scope:** `messages:send`",
         "parameters": [
           {
             "name": "contact",
@@ -9418,12 +9647,12 @@
                   "proof_reference": {
                     "type": "string",
                     "maxLength": 255,
-                    "description": "Where the consent is recorded \u2014 a form id, URL or ticket number."
+                    "description": "Where the consent is recorded — a form id, URL or ticket number."
                   },
                   "captured_by": {
                     "type": "string",
                     "maxLength": 255,
-                    "description": "Who captured it \u2014 a user id or system name."
+                    "description": "Who captured it — a user id or system name."
                   }
                 }
               }
@@ -9622,7 +9851,7 @@
                     },
                     "id": {
                       "type": "string",
-                      "description": "Stable event id for this test payload (`evt_test_\u2026`).",
+                      "description": "Stable event id for this test payload (`evt_test_…`).",
                       "example": "evt_test_9f8b1c2d-4e5f-4a6b-8c7d-0e1f2a3b4c5d"
                     }
                   }
@@ -9770,7 +9999,7 @@
           "Webhooks"
         ],
         "summary": "Rotate a webhook signing secret",
-        "description": "Issues a new signing secret without deleting the endpoint. The new `secret` is shown once \u2014 store it before the response is gone.\n\n**Required scope:** `webhooks:write`",
+        "description": "Issues a new signing secret without deleting the endpoint. The new `secret` is shown once — store it before the response is gone.\n\n**Required scope:** `webhooks:write`",
         "parameters": [
           {
             "name": "webhook",
@@ -11873,6 +12102,1293 @@
           }
         ]
       }
+    },
+    "/v1/calls/permissions": {
+      "get": {
+        "tags": [
+          "Calls"
+        ],
+        "summary": "Check call permission",
+        "description": "Whether the business may call this person now, straight from Meta. `can_call` and `can_request_permission` are the plain answers; `actions` is Meta's detail with the limits left.\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "description": "E.164 phone number, or a business-scoped user id.",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "connection_uuid",
+            "in": "query",
+            "description": "Which number to check from. Defaults to the workspace default.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Permission state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "description": "`temporary`, `permanent` or `no_permission`."
+                    },
+                    "expires_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "can_call": {
+                      "type": "boolean"
+                    },
+                    "can_request_permission": {
+                      "type": "boolean"
+                    },
+                    "actions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Calling is unavailable on this connection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/calls/{call}/pre-accept": {
+      "post": {
+        "tags": [
+          "Calls"
+        ],
+        "summary": "Pre-accept a call",
+        "description": "Send your SDP answer so the media path is ready before the caller hears anything. Then call accept with the same answer.\n\n**Required scope:** `messages:send`",
+        "parameters": [
+          {
+            "name": "call",
+            "in": "path",
+            "required": true,
+            "description": "Call uuid.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "The call.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Call"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Calling is unavailable, the call is over, or Meta refused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "sdp_answer"
+                ],
+                "properties": {
+                  "sdp_answer": {
+                    "type": "string",
+                    "maxLength": 20000
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/calls/{call}/accept": {
+      "post": {
+        "tags": [
+          "Calls"
+        ],
+        "summary": "Accept a call",
+        "description": "Answer a ringing customer-initiated call with the same SDP answer you pre-accepted. Optionally record or transcribe it.\n\n**Required scope:** `messages:send`",
+        "parameters": [
+          {
+            "name": "call",
+            "in": "path",
+            "required": true,
+            "description": "Call uuid.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "The call.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Call"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Calling is unavailable, the call is over, or Meta refused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "sdp_answer"
+                ],
+                "properties": {
+                  "sdp_answer": {
+                    "type": "string",
+                    "maxLength": 20000
+                  },
+                  "biz_opaque_callback_data": {
+                    "type": "string",
+                    "maxLength": 512,
+                    "nullable": true
+                  },
+                  "recording": {
+                    "$ref": "#/components/schemas/CallRecordingOptions"
+                  },
+                  "transcription": {
+                    "$ref": "#/components/schemas/CallRecordingOptions"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/calls/{call}/reject": {
+      "post": {
+        "tags": [
+          "Calls"
+        ],
+        "summary": "Decline a call",
+        "description": "Decline a ringing customer-initiated call. The terminal status arrives on the webhook.\n\n**Required scope:** `messages:send`",
+        "parameters": [
+          {
+            "name": "call",
+            "in": "path",
+            "required": true,
+            "description": "Call uuid.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "The call.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Call"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Calling is unavailable, the call is over, or Meta refused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/calls/{call}/terminate": {
+      "post": {
+        "tags": [
+          "Calls"
+        ],
+        "summary": "End a call",
+        "description": "End a call in either direction. Call it even after your media path hung up: Meta prices calls from this signal.\n\n**Required scope:** `messages:send`",
+        "parameters": [
+          {
+            "name": "call",
+            "in": "path",
+            "required": true,
+            "description": "Call uuid.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "The call.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Call"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Calling is unavailable, the call is over, or Meta refused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/calls/{call}/recording": {
+      "get": {
+        "tags": [
+          "Calls"
+        ],
+        "summary": "Download a call recording",
+        "description": "The recording LazyApp downloaded from Meta (`audio/ogg`, Opus).\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "call",
+            "in": "path",
+            "required": true,
+            "description": "Call uuid.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "The audio file.",
+            "content": {
+              "audio/ogg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or the call was not recorded (`code` `no_recording`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Still downloading (`code` `recording_pending`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/calling-settings": {
+      "get": {
+        "tags": [
+          "Calls"
+        ],
+        "summary": "Get calling settings",
+        "description": "The number's calling settings from Meta. SIP passwords are never returned.\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string"
+                    },
+                    "phone_number_id": {
+                      "type": "string"
+                    },
+                    "calling_enabled_for_number": {
+                      "type": "boolean"
+                    },
+                    "settings": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "call_icon_visibility": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "callback_permission_status": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "call_hours": {
+                          "type": "object",
+                          "nullable": true,
+                          "additionalProperties": true
+                        },
+                        "call_icons": {
+                          "type": "object",
+                          "nullable": true,
+                          "additionalProperties": true
+                        },
+                        "audio": {
+                          "type": "object",
+                          "nullable": true,
+                          "additionalProperties": true
+                        },
+                        "srtp_key_exchange_protocol": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "voicemail": {
+                          "type": "object",
+                          "nullable": true,
+                          "additionalProperties": true
+                        },
+                        "sip": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "servers": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": true
+                              }
+                            }
+                          }
+                        },
+                        "restrictions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Calling is not enabled for this number yet (`code` `calling_unavailable`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Calls"
+        ],
+        "summary": "Update calling settings",
+        "description": "Send Meta's `calling` object. Only the fields you send change; Meta replaces `call_hours` wholesale. Enabling calling turns on the connection's `calling` capability.\n\n**Required scope:** `messages:send`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "calling"
+                ],
+                "properties": {
+                  "calling": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "ENABLED",
+                          "DISABLED"
+                        ]
+                      },
+                      "call_icon_visibility": {
+                        "type": "string",
+                        "enum": [
+                          "DEFAULT",
+                          "DISABLE_ALL"
+                        ]
+                      },
+                      "call_icons": {
+                        "type": "object",
+                        "properties": {
+                          "restrict_to_user_countries": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 2,
+                              "maxLength": 2
+                            }
+                          }
+                        }
+                      },
+                      "callback_permission_status": {
+                        "type": "string",
+                        "enum": [
+                          "ENABLED",
+                          "DISABLED"
+                        ]
+                      },
+                      "call_hours": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "description": "`status`, `timezone_id`, `weekly_operating_hours` (up to two windows a day, `HHMM`) and optional `holiday_schedule`."
+                      },
+                      "audio": {
+                        "type": "object",
+                        "properties": {
+                          "additional_codecs": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "PCMA",
+                                "PCMU"
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      "srtp_key_exchange_protocol": {
+                        "type": "string",
+                        "enum": [
+                          "DTLS",
+                          "SDES"
+                        ]
+                      },
+                      "voicemail": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "ENABLED",
+                              "DISABLED"
+                            ]
+                          },
+                          "triggers": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "REJECT",
+                                "TIMEOUT"
+                              ]
+                            }
+                          },
+                          "audio": {
+                            "type": "object",
+                            "properties": {
+                              "default": {
+                                "type": "object",
+                                "properties": {
+                                  "announcement_media_id": {
+                                    "type": "string"
+                                  },
+                                  "timeout_seconds": {
+                                    "type": "integer",
+                                    "minimum": 5,
+                                    "maximum": 60
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "sip": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Saved settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string"
+                    },
+                    "phone_number_id": {
+                      "type": "string"
+                    },
+                    "calling_enabled_for_number": {
+                      "type": "boolean"
+                    },
+                    "settings": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "call_icon_visibility": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "callback_permission_status": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "call_hours": {
+                          "type": "object",
+                          "nullable": true,
+                          "additionalProperties": true
+                        },
+                        "call_icons": {
+                          "type": "object",
+                          "nullable": true,
+                          "additionalProperties": true
+                        },
+                        "audio": {
+                          "type": "object",
+                          "nullable": true,
+                          "additionalProperties": true
+                        },
+                        "srtp_key_exchange_protocol": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "voicemail": {
+                          "type": "object",
+                          "nullable": true,
+                          "additionalProperties": true
+                        },
+                        "sip": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "servers": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": true
+                              }
+                            }
+                          }
+                        },
+                        "restrictions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by validation or Meta.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/flows/{flow}/health": {
+      "get": {
+        "tags": [
+          "Flows"
+        ],
+        "summary": "Check a flow can be sent",
+        "description": "Asks Meta whether this flow can be sent from your number, and what blocks it. Stored on the flow as `can_send_message`.\n\n**Required scope:** `flows:write`",
+        "parameters": [
+          {
+            "name": "flow",
+            "in": "path",
+            "required": true,
+            "description": "Flow uuid or Meta flow id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Health.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "can_send_message": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "AVAILABLE",
+                        "LIMITED",
+                        "BLOCKED",
+                        null
+                      ]
+                    },
+                    "problems": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Why it is blocked."
+                    },
+                    "notes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Limits that still allow sending."
+                    },
+                    "entities": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      },
+                      "description": "Meta's per-node detail (FLOW, WABA, BUSINESS, APP)."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The flow is not on WhatsApp yet, or Meta refused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/flows/copy": {
+      "post": {
+        "tags": [
+          "Flows"
+        ],
+        "summary": "Copy flows from another number",
+        "description": "Copies flows from another connection's WhatsApp Business account into the workspace's default account, through Meta's flow migration. Both accounts must belong to the same Meta business. Copies keep their names and status.\n\n**Required scope:** `flows:write`",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "source_connection_uuid"
+                ],
+                "properties": {
+                  "source_connection_uuid": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "flow_names": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "description": "Leave out to copy every flow."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "What was copied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "copied": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "provider_flow_id": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    },
+                    "failed": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Source connection not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Same account, too many names, or Meta refused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -12581,6 +14097,16 @@
             "nullable": true
           },
           "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "can_send_message": {
+            "type": "string",
+            "nullable": true,
+            "description": "Meta's last answer from the health check: `AVAILABLE`, `LIMITED` or `BLOCKED`."
+          },
+          "health_checked_at": {
             "type": "string",
             "format": "date-time",
             "nullable": true
@@ -14153,6 +15679,89 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "session": {
+            "type": "object",
+            "nullable": true,
+            "description": "While the call is set up: the SDP offer to answer (customer-initiated) or Meta's SDP answer to apply (business-initiated).",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "offer",
+                  "answer"
+                ]
+              },
+              "sdp": {
+                "type": "string"
+              }
+            }
+          },
+          "recording": {
+            "type": "object",
+            "properties": {
+              "available": {
+                "type": "boolean"
+              },
+              "pending": {
+                "type": "boolean",
+                "description": "Meta announced it and LazyApp is downloading it."
+              },
+              "mime_type": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "transcript": {
+            "type": "object",
+            "properties": {
+              "available": {
+                "type": "boolean"
+              },
+              "pending": {
+                "type": "boolean"
+              },
+              "language": {
+                "type": "string",
+                "nullable": true,
+                "description": "Language Meta detected, for example `en`."
+              },
+              "text": {
+                "type": "string",
+                "nullable": true,
+                "description": "Whole call, each turn prefixed `[Business]` or `[Customer]`."
+              }
+            }
+          },
+          "transcript_segments": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "speaker": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "channel": {
+                  "type": "integer",
+                  "nullable": true,
+                  "description": "0 is the business, 1 the customer."
+                },
+                "start": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "end": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "text": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       },
@@ -14519,6 +16128,51 @@
           },
           "message": {
             "type": "string"
+          }
+        }
+      },
+      "CallRecordingOptions": {
+        "type": "object",
+        "description": "Ask Meta to record or transcribe this call. Both people hear a short notice built from `purpose` first.",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ENABLED",
+              "DISABLED"
+            ]
+          },
+          "purpose": {
+            "type": "string",
+            "maxLength": 250,
+            "description": "Required when ENABLED. Spoken to both people."
+          },
+          "announcement_language": {
+            "type": "string",
+            "description": "Required when ENABLED.",
+            "enum": [
+              "en",
+              "en_US",
+              "en_AU",
+              "en_CA",
+              "en_GB",
+              "en_IN",
+              "en_NZ",
+              "nl",
+              "fr",
+              "de",
+              "hi",
+              "it",
+              "kn",
+              "pt",
+              "es",
+              "es_ES",
+              "te",
+              "vi"
+            ]
           }
         }
       }
