@@ -1,0 +1,110 @@
+---
+title: "Pricing details"
+description: "Volume tiers, re-pricing when Meta applies another category, authentication-international rates, and your WhatsApp billing currency."
+---
+
+WhatsApp charges per delivered message, by [category](/billing/whatsapp-rates#categories) and the contact's country. This page covers the details that change the price of a single message, and how LazyApp follows them so your wallet matches what WhatsApp billed.
+
+## What Meta reports for each message
+
+Every status update from WhatsApp carries a `pricing` object: whether the message is billable, and the `category` Meta charged. LazyApp quotes a send when it goes out, then corrects the quote from that report:
+
+| Meta's `pricing.category` | What LazyApp does |
+| --- | --- |
+| Same as the quote | Nothing. The charge stands |
+| Another category, e.g. a template Meta re-categorised from utility to marketing | Re-prices the send at Meta's category and charges or refunds the difference in the wallet. The usage row keeps both categories |
+| `authentication_international` | Re-prices at the authentication-international rate, once that rate is loaded |
+| `marketing_lite` | Billed as marketing (Marketing Messages API) |
+| `referral_conversion` | Free. Never re-priced |
+| `general_purpose_ai` | Re-prices at the AI-provider rate, once that rate is loaded |
+
+When LazyApp has no rate for Meta's category, it keeps the original charge and logs it, so a send is never left unpriced.
+
+Brand customers and platform customers see the re-priced amount with their own markup. Their spending limit counts what they actually paid.
+
+## Volume tiers
+
+Utility and authentication messages get cheaper as you send more in a month. Meta counts messages per market and category, and only charged messages count. Message number N pays the rate of the tier that contains N, so once you cross a tier, every later message that month pays the lower rate.
+
+LazyApp counts per workspace, the same way. The tier is on each usage row (`volume_tier`), and **Usage** in the console tells you when you reach a new tier. Marketing and service messages have no tiers.
+
+```bash
+curl "https://lazyapp.in/v1/pricing/tiers?category=utility&region=IN" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+**Scope:** `billing:read`
+
+```json
+{
+  "data": [
+    { "category": "utility", "region": "IN", "currency": "USD", "tier": "1:100000", "meta_rate": "0.001100" }
+  ]
+}
+```
+
+`tier` is the first and last message of the tier for the month (`MAX` for the top tier). `meta_rate` is Meta's rate in the tier, before LazyApp's margin.
+
+## Authentication-international rates
+
+Businesses in some countries, India among them, pay a higher authentication rate for one-time passcodes sent to contacts in other countries. Meta tells LazyApp when your WhatsApp account becomes eligible and from when. **Usage** shows it, and so does `GET /v1/pricing/account`.
+
+## Pricing facts for your account
+
+```bash
+curl "https://lazyapp.in/v1/pricing/account?phone_number_id=106540352242922&refresh=true" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+**Scope:** `billing:read`. Without `refresh=true`, LazyApp answers from what Meta last sent it, without calling Meta.
+
+```json
+{
+  "currency": "INR",
+  "primary_business_location": "IN",
+  "auth_international": {
+    "kind": "auth_international",
+    "country": "IN",
+    "starts_at": "2026-11-01T00:00:00+00:00"
+  },
+  "volume_tiers": [
+    { "kind": "volume_tier", "pricing_category": "utility", "region": "IN", "tier": "100001:1000000", "effective_month": "2026-10" }
+  ],
+  "waba_id": "102290129340398"
+}
+```
+
+`volume_tiers` lists the tiers Meta reported for this month.
+
+## Changing your WhatsApp billing currency
+
+This applies only when **you** pay WhatsApp directly (a customer-managed account). When LazyApp pays WhatsApp for the number, your wallet stays in INR and there is nothing to change.
+
+Meta changes the currency by copying your WhatsApp account into a new one in the new currency. Templates are copied, then the numbers move. In the console, open **Phone numbers → your number → Advanced → Billing currency**. Over the API:
+
+| Call | Scope | Does |
+| --- | --- | --- |
+| `POST /v1/connections/{connection}/currency-migration` | `billing:write` | Starts the change. Pass `currency` (e.g. `USD`, `INR`, `EUR`) and, on a Meta credit line, `extended_credit_id`. Answers `202` |
+| `GET /v1/connections/{connection}/currency-migration` | `billing:read` | The current `status`, from Meta |
+| `POST /v1/connections/{connection}/currency-migration/complete` | `billing:write` | Finishes once the status is `READY_TO_COMPLETE`. LazyApp then moves the numbers to the new account |
+
+```json
+{
+  "migration": {
+    "migration_id": "1234567890",
+    "status": "READY_TO_COMPLETE",
+    "currency": "USD",
+    "destination_waba": { "id": "109876543210", "currency": "USD" }
+  }
+}
+```
+
+## Conversation-based pricing
+
+Before July 2025, WhatsApp charged per 24-hour conversation, not per message. That model has ended, and LazyApp bills per message only.
+
+## Related
+
+- [WhatsApp message rates](/billing/whatsapp-rates)
+- [Auto top-up and receipts](/billing/auto-recharge)
+- [WhatsApp analytics](/guides/whatsapp-analytics)

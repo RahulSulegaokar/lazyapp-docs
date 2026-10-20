@@ -16,8 +16,10 @@ Every API key carries scopes. A call outside them returns `403`.
 | `flows:write` | Manage WhatsApp Flows and read their responses |
 | `customers:write` | Manage platform customers, setup links and embed tokens |
 | `customers:act` | Act on behalf of a platform customer without managing them |
-| `billing:read` | Read billing and usage |
+| `billing:read` | Read billing and usage, pricing facts and volume tiers |
+| `billing:write` | Change a WhatsApp account's billing currency |
 | `connections:write` | Change WhatsApp numbers and their account: register, two-step PIN, display name, blue tick, QR codes, conversation starters, opt-in links, adding numbers |
+| `payments:write` | Manage payment setups and gateway accounts, and refund payments |
 
 ## By endpoint group
 
@@ -40,6 +42,12 @@ Every API key carries scopes. A call outside them returns `403`.
 | Verify — send | — | `messages:send` |
 | Verify — verify | `messages:read` | — |
 | Platform | `customers:write` or `customers:act` | `customers:write` |
+| Payments — requests, status, lookup | `messages:read` | `messages:send` |
+| Payments — setups, gateway accounts, refunds | `messages:read` (list setups) | `payments:write` |
+| Payment templates | — | `templates:write` |
+| Shop settings | `messages:read` | `messages:send` |
+| Pricing and currency change | `billing:read` | `billing:write` |
+| WhatsApp analytics | `messages:read` | `templates:write` (template insights) |
 
 <Note>
   Media metadata reads use `messages:read`, while uploads and deletes need `media:write`.

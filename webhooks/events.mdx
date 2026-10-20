@@ -171,6 +171,17 @@ Only fires on numbers where Meta has enabled calling. Check [capabilities](/conc
 | --- | --- |
 | `conversion.detected` | Meta detected a lead (`LeadSubmitted`) or purchase (`Purchase`) in a chat that started from a Click-to-WhatsApp ad. Purchases carry `currency` and `amount` |
 
+## Payments
+
+| Event | When |
+| --- | --- |
+| `payment.captured` | The contact paid a [payment request](/guides/payments-india) |
+| `payment.failed` | A payment attempt failed. The contact can try again |
+| `payment.refunded` | A refund went through. `amount_refunded` has the total so far |
+| `payment.order_status_updated` | An order status update was sent to the contact |
+
+The payload is the payment object from `GET /v1/payments/{id}`, including your `reference_id` and `metadata`.
+
 ## Platform
 
 These matter if you resell LazyApp.

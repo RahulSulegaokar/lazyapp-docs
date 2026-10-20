@@ -104,6 +104,14 @@
     {
       "name": "Funding",
       "description": "Local funding status and recorded WhatsApp charges."
+    },
+    {
+      "name": "Connections",
+      "description": "WhatsApp connections: block users, business profile, insights."
+    },
+    {
+      "name": "Payments",
+      "description": "WhatsApp payments in India: ask for payment, follow it, update the order and refund."
     }
   ],
   "paths": {
@@ -20655,6 +20663,2734 @@
           }
         }
       }
+    },
+    "/v1/payments": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List payments",
+        "description": "Payment requests in this workspace, newest first. Cursor-paginated.\n\n**Required scope:** `messages:read`",
+        "responses": {
+          "200": {
+            "description": "A page of payments.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOrderList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "payment_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reference_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Send a payment request",
+        "description": "Send an order details message with a **Review and pay** button. Amounts are paise. See the [payments guide](/guides/payments-india).\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "201": {
+            "description": "The payment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOrder"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "The wallet cannot pay for the message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendPaymentRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payments/{paymentOrder}": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve a payment",
+        "description": "One payment.\n\n**Required scope:** `messages:read`",
+        "responses": {
+          "200": {
+            "description": "The payment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOrder"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "paymentOrder",
+            "in": "path",
+            "required": true,
+            "description": "Payment id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/payments/{paymentOrder}/status": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Update the order status",
+        "description": "Send an `order_status` update. WhatsApp only allows forward moves.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "200": {
+            "description": "The payment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOrder"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "paymentOrder",
+            "in": "path",
+            "required": true,
+            "description": "Payment id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "processing",
+                      "partially_shipped",
+                      "shipped",
+                      "completed",
+                      "canceled"
+                    ]
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "body": {
+                    "type": "string",
+                    "maxLength": 1024
+                  },
+                  "template": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "language": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payments/{paymentOrder}/lookup": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Look up a payment",
+        "description": "Ask WhatsApp for the latest state. `payment_gateway` payments only.\n\n**Required scope:** `messages:read`",
+        "responses": {
+          "200": {
+            "description": "The payment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOrder"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "paymentOrder",
+            "in": "path",
+            "required": true,
+            "description": "Payment id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/payments/{paymentOrder}/refund": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Refund a payment",
+        "description": "Refund up to what was paid.\n\n**Required scope:** `payments:write`",
+        "responses": {
+          "200": {
+            "description": "The payment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOrder"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "paymentOrder",
+            "in": "path",
+            "required": true,
+            "description": "Payment id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "description": "Paise.",
+                    "minimum": 1
+                  },
+                  "speed": {
+                    "type": "string",
+                    "enum": [
+                      "normal",
+                      "instant"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payments/configurations": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List payment setups",
+        "description": "Payment setups (Meta payment configurations) on the number's WhatsApp account.\n\n**Required scope:** `messages:read`",
+        "responses": {
+          "200": {
+            "description": "Payment setups.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PaymentConfiguration"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "phone_number_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Which number. Defaults to your default number."
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Read Meta first."
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Create a payment setup",
+        "description": "Link a payment gateway or a UPI ID to the WhatsApp account. A gateway setup comes back with a `link_url` to approve.\n\n**Required scope:** `payments:write`",
+        "responses": {
+          "201": {
+            "description": "The payment setup.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentConfiguration"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "configuration_name",
+                  "provider_name"
+                ],
+                "properties": {
+                  "phone_number_id": {
+                    "type": "string"
+                  },
+                  "configuration_name": {
+                    "type": "string",
+                    "maxLength": 60,
+                    "pattern": "^[A-Za-z0-9_\\-]+$"
+                  },
+                  "provider_name": {
+                    "type": "string",
+                    "enum": [
+                      "razorpay",
+                      "payu",
+                      "zaakpay",
+                      "billdesk",
+                      "upi_vpa"
+                    ]
+                  },
+                  "merchant_vpa": {
+                    "type": "string",
+                    "description": "Required for `upi_vpa`."
+                  },
+                  "merchant_category_code": {
+                    "type": "string",
+                    "pattern": "^\\d{4}$"
+                  },
+                  "purpose_code": {
+                    "type": "string",
+                    "maxLength": 4
+                  },
+                  "redirect_url": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payments/configurations/{paymentConfiguration}": {
+      "patch": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Update a payment setup",
+        "description": "Set the data endpoint for checkout coupons and shipping. Meta enables this per business.\n\n**Required scope:** `payments:write`",
+        "responses": {
+          "200": {
+            "description": "The payment setup.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentConfiguration"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "paymentConfiguration",
+            "in": "path",
+            "required": true,
+            "description": "Payment setup id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data_endpoint_url": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uri"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Delete a payment setup",
+        "description": "Remove the setup from WhatsApp.\n\n**Required scope:** `payments:write`",
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "paymentConfiguration",
+            "in": "path",
+            "required": true,
+            "description": "Payment setup id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/payments/configurations/{paymentConfiguration}/link": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Get a new linking page",
+        "description": "A fresh gateway linking page for a setup that still needs one.\n\n**Required scope:** `payments:write`",
+        "responses": {
+          "200": {
+            "description": "The payment setup.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentConfiguration"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "paymentConfiguration",
+            "in": "path",
+            "required": true,
+            "description": "Payment setup id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "redirect_url": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payments/gateway-accounts": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List gateway accounts",
+        "description": "Your own payment gateway accounts. Keys are never returned.\n\n**Required scope:** `payments:write`",
+        "responses": {
+          "200": {
+            "description": "Gateway accounts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PaymentGatewayAccount"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Add a gateway account",
+        "description": "Store your Cashfree or Razorpay keys. LazyApp checks them with the gateway and stores them encrypted.\n\n**Required scope:** `payments:write`",
+        "responses": {
+          "201": {
+            "description": "The gateway account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentGatewayAccount"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "label",
+                  "credentials"
+                ],
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "cashfree",
+                      "razorpay"
+                    ]
+                  },
+                  "label": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "credentials": {
+                    "type": "object",
+                    "description": "Cashfree: `client_id`, `client_secret`. Razorpay: `key_id`, `key_secret`, `webhook_secret`."
+                  },
+                  "is_sandbox": {
+                    "type": "boolean"
+                  },
+                  "payment_configuration_name": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payments/gateway-accounts/{paymentGatewayAccount}": {
+      "delete": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Delete a gateway account",
+        "description": "Forget the keys.\n\n**Required scope:** `payments:write`",
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "paymentGatewayAccount",
+            "in": "path",
+            "required": true,
+            "description": "Gateway account id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/payments/templates": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Create a payment template",
+        "description": "Create an order details, order status or checkout button template. Send `header_media` as multipart for `checkout`.\n\n**Required scope:** `templates:write`",
+        "responses": {
+          "201": {
+            "description": "Submitted for review.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "name",
+                  "language",
+                  "body"
+                ],
+                "properties": {
+                  "phone_number_id": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "order_details",
+                      "order_status",
+                      "checkout"
+                    ]
+                  },
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_]+$"
+                  },
+                  "language": {
+                    "type": "string"
+                  },
+                  "body": {
+                    "type": "string",
+                    "maxLength": 1024
+                  },
+                  "body_examples": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "footer": {
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "header_text": {
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "header_media": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "quick_replies": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "maxItems": 9
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/commerce": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Retrieve shop settings",
+        "description": "The catalog, storefront icon, cart and catalog link of a number.\n\n**Required scope:** `messages:read`",
+        "responses": {
+          "200": {
+            "description": "Shop settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Update shop settings",
+        "description": "Connect a catalog, show the storefront icon, turn the cart on or off, or forward orders. Only the fields you send change.\n\n**Required scope:** `messages:send`",
+        "responses": {
+          "200": {
+            "description": "Shop settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "catalog_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d+$"
+                  },
+                  "is_catalog_visible": {
+                    "type": "boolean"
+                  },
+                  "is_cart_enabled": {
+                    "type": "boolean"
+                  },
+                  "order_handoff_url": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uri"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/pricing/account": {
+      "get": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Retrieve pricing facts",
+        "description": "Billing currency, primary business location, authentication-international eligibility and this month's volume tiers for a number's WhatsApp account.\n\n**Required scope:** `billing:read`",
+        "responses": {
+          "200": {
+            "description": "Pricing facts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingAccount"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "phone_number_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Which number. Defaults to your default number."
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Read Meta first."
+          }
+        ]
+      }
+    },
+    "/v1/pricing/tiers": {
+      "get": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "List volume tiers",
+        "description": "Meta's volume tiers for utility and authentication.\n\n**Required scope:** `billing:read`",
+        "responses": {
+          "200": {
+            "description": "Volume tiers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "category": {
+                            "type": "string"
+                          },
+                          "region": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "tier": {
+                            "type": "string",
+                            "examples": [
+                              "1:100000"
+                            ]
+                          },
+                          "meta_rate": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/connections/{connection}/currency-migration": {
+      "get": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Retrieve a currency change",
+        "description": "The billing currency change in progress, from Meta.\n\n**Required scope:** `billing:read`",
+        "responses": {
+          "200": {
+            "description": "The change, or `null`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrencyMigration"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Start a currency change",
+        "description": "Change the WhatsApp billing currency of a customer-managed account. Meta copies the account into one in the new currency.\n\n**Required scope:** `billing:write`",
+        "responses": {
+          "202": {
+            "description": "Started.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrencyMigration"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "currency"
+                ],
+                "properties": {
+                  "currency": {
+                    "type": "string",
+                    "examples": [
+                      "USD"
+                    ]
+                  },
+                  "extended_credit_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/currency-migration/complete": {
+      "post": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Finish a currency change",
+        "description": "Finish once the status is `READY_TO_COMPLETE`. LazyApp then moves the numbers to the new account.\n\n**Required scope:** `billing:write`",
+        "responses": {
+          "200": {
+            "description": "The change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrencyMigration"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "description": "Connection uuid.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/analytics/whatsapp": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Read WhatsApp analytics",
+        "description": "WhatsApp's own counts for a number's WhatsApp account. See the [analytics guide](/guides/whatsapp-analytics).\n\n**Required scope:** `messages:read`",
+        "responses": {
+          "200": {
+            "description": "The report.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppAnalyticsReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "WhatsApp or the payment gateway failed in a way worth retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "metric",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "messaging",
+                "pricing",
+                "conversation",
+                "calls",
+                "templates",
+                "template_groups",
+                "groups"
+              ]
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "phone_number_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Which number. Defaults to your default number."
+          },
+          {
+            "name": "granularity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "half_hour",
+                "day",
+                "daily",
+                "month",
+                "monthly"
+              ]
+            }
+          },
+          {
+            "name": "phone_numbers[]",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "country_codes[]",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "dimensions[]",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "metric_types[]",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "pricing_categories[]",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "pricing_types[]",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "product_types[]",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "directions[]",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "templates[]",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "Template names, for `templates`."
+          },
+          {
+            "name": "ids[]",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "Meta ids, for `templates`, `template_groups` and `groups`."
+          }
+        ]
+      }
+    },
+    "/v1/analytics/template-insights": {
+      "post": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Turn on template insights",
+        "description": "Turn on per-template analytics for the WhatsApp account. Meta cannot turn this off again.\n\n**Required scope:** `templates:write`",
+        "responses": {
+          "200": {
+            "description": "Enabled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "waba_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or WhatsApp refused the request. WhatsApp refusals carry `code` and `retryable`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "confirm"
+                ],
+                "properties": {
+                  "phone_number_id": {
+                    "type": "string"
+                  },
+                  "confirm": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -24814,6 +27550,817 @@
               "te",
               "vi"
             ]
+          }
+        }
+      },
+      "CommerceError": {
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "One plain sentence to show to a person."
+          },
+          "code": {
+            "type": "string",
+            "description": "WhatsApp's error code as `provider_<code>`, when it sent one.",
+            "examples": [
+              "provider_134011"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PaymentOrder": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference_id": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "processing",
+              "partially_shipped",
+              "shipped",
+              "completed",
+              "canceled"
+            ]
+          },
+          "status_label": {
+            "type": "string"
+          },
+          "payment_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "captured",
+              "failed",
+              "partially_refunded",
+              "refunded"
+            ]
+          },
+          "payment_status_label": {
+            "type": "string"
+          },
+          "payment_method": {
+            "type": "string",
+            "enum": [
+              "payment_gateway",
+              "upi_intent_link",
+              "payment_link"
+            ]
+          },
+          "gateway": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "payment_configuration": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "payment_link": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "examples": [
+              "INR"
+            ]
+          },
+          "total_amount": {
+            "type": "integer",
+            "description": "Paise."
+          },
+          "amount_paid": {
+            "type": "integer",
+            "description": "Paise."
+          },
+          "amount_refunded": {
+            "type": "integer",
+            "description": "Paise."
+          },
+          "paid_with": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "How the contact paid, e.g. `upi`."
+          },
+          "goods_type": {
+            "type": "string"
+          },
+          "order": {
+            "type": "object",
+            "description": "The items and totals as sent to WhatsApp."
+          },
+          "transactions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "refunds": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "message_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "phone_number_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "paid_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PaymentOrderList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PaymentOrder"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SendPaymentRequest": {
+        "type": "object",
+        "required": [
+          "to",
+          "body",
+          "items",
+          "payment"
+        ],
+        "properties": {
+          "to": {
+            "type": "string",
+            "examples": [
+              "+919812345670"
+            ]
+          },
+          "phone_number_id": {
+            "type": "string"
+          },
+          "reference_id": {
+            "type": "string",
+            "maxLength": 35,
+            "pattern": "^[A-Za-z0-9_.\\-]+$"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "footer": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "header_image_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "goods_type": {
+            "type": "string",
+            "enum": [
+              "digital-goods",
+              "physical-goods"
+            ]
+          },
+          "catalog_id": {
+            "type": "string"
+          },
+          "expires_in_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 43200
+          },
+          "expiry_description": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 999,
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "amount",
+                "quantity"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "maxLength": 60
+                },
+                "amount": {
+                  "type": "integer",
+                  "description": "Paise.",
+                  "minimum": 1
+                },
+                "sale_amount": {
+                  "type": "integer",
+                  "description": "Paise.",
+                  "minimum": 1
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10000
+                },
+                "retailer_id": {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                "image_url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "country_of_origin": {
+                  "type": "string"
+                },
+                "importer_name": {
+                  "type": "string"
+                },
+                "importer_address": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "importer": {
+            "type": "object",
+            "description": "Required by WhatsApp for physical goods that are not from a catalog.",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "country_of_origin": {
+                "type": "string"
+              },
+              "address": {
+                "type": "object",
+                "properties": {
+                  "address_line1": {
+                    "type": "string"
+                  },
+                  "address_line2": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "zone_code": {
+                    "type": "string"
+                  },
+                  "postal_code": {
+                    "type": "string"
+                  },
+                  "country_code": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "beneficiary": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "address_line1": {
+                "type": "string"
+              },
+              "address_line2": {
+                "type": "string"
+              },
+              "city": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "postal_code": {
+                "type": "string"
+              }
+            }
+          },
+          "tax": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "description": "Paise."
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 60
+              }
+            }
+          },
+          "shipping": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "description": "Paise."
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 60
+              }
+            }
+          },
+          "discount": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "description": "Paise."
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 60
+              },
+              "program_name": {
+                "type": "string"
+              }
+            }
+          },
+          "payment": {
+            "type": "object",
+            "required": [
+              "method"
+            ],
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "payment_gateway",
+                  "upi_intent_link",
+                  "payment_link"
+                ]
+              },
+              "configuration": {
+                "type": "string",
+                "description": "Payment setup name."
+              },
+              "gateway_account": {
+                "type": "string",
+                "format": "uuid",
+                "description": "LazyApp creates the UPI intent or payment link with these keys."
+              },
+              "upi_intent_link": {
+                "type": "string",
+                "description": "Your own `upi://pay?…` link."
+              },
+              "payment_link": {
+                "type": "string",
+                "format": "uri"
+              },
+              "success_url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "cancel_url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "preferred_upi_app": {
+                "type": "string",
+                "enum": [
+                  "gpay",
+                  "phonepe",
+                  "paytm",
+                  "bhim",
+                  "amazonpay",
+                  "cred",
+                  "mobikwik"
+                ]
+              },
+              "enabled_payment_options": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "upi",
+                    "web"
+                  ]
+                }
+              },
+              "gateway_fields": {
+                "type": "object",
+                "description": "Gateway extras: `receipt`, `notes`, `udf1`–`udf4`, `extra1`–`extra2`, `additional_info1`–`7`."
+              }
+            }
+          },
+          "template": {
+            "type": "object",
+            "description": "Send as a template, to reach contacts outside the 24-hour window.",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "language": {
+                "type": "string"
+              },
+              "category": {
+                "type": "string",
+                "enum": [
+                  "utility",
+                  "marketing"
+                ]
+              },
+              "button_index": {
+                "type": "integer"
+              },
+              "style": {
+                "type": "string",
+                "enum": [
+                  "order_details",
+                  "link_button"
+                ],
+                "description": "`link_button` fills a dynamic URL button with the payment link (Enhanced Payment Links)."
+              },
+              "components": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "metadata": {
+            "type": "object"
+          }
+        }
+      },
+      "PaymentConfiguration": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "configuration_name": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "razorpay",
+              "payu",
+              "zaakpay",
+              "billdesk",
+              "upi_vpa"
+            ]
+          },
+          "provider_label": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "needs_connecting",
+              "needs_testing"
+            ]
+          },
+          "status_label": {
+            "type": "string"
+          },
+          "provider_mid": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "merchant_vpa": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "merchant_category_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "purpose_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data_endpoint_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "link_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Open it to link the gateway, while it is valid."
+          },
+          "link_url_expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "phone_number_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "waba_id": {
+            "type": "string"
+          },
+          "synced_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "PaymentGatewayAccount": {
+        "type": "object",
+        "description": "Keys are never returned.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "cashfree",
+              "razorpay"
+            ]
+          },
+          "provider_label": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "key_hint": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "examples": [
+              "••••a1b2"
+            ]
+          },
+          "is_sandbox": {
+            "type": "boolean"
+          },
+          "payment_configuration_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "methods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "webhook_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Add this in your gateway dashboard."
+          },
+          "verified_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_webhook_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "CommerceSettings": {
+        "type": "object",
+        "properties": {
+          "catalog_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "connected_catalogs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "is_catalog_visible": {
+            "type": "boolean"
+          },
+          "is_cart_enabled": {
+            "type": "boolean"
+          },
+          "order_handoff_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "catalog_link": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "examples": [
+              "https://wa.me/c/919812345670"
+            ]
+          }
+        }
+      },
+      "PricingAccount": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "primary_business_location": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "auth_international": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "volume_tiers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "waba_id": {
+            "type": "string"
+          }
+        }
+      },
+      "CurrencyMigration": {
+        "type": "object",
+        "properties": {
+          "migration": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "migration_id": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "examples": [
+                  "INITIATED",
+                  "READY_TO_COMPLETE",
+                  "COMPLETED"
+                ]
+              },
+              "currency": {
+                "type": "string"
+              },
+              "destination_waba": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "WhatsAppAnalyticsReport": {
+        "type": "object",
+        "properties": {
+          "metric": {
+            "type": "string"
+          },
+          "granularity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data_points": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "WhatsApp's data points, unchanged."
+          },
+          "waba_id": {
+            "type": "string"
           }
         }
       }

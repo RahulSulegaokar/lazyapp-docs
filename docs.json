@@ -47,6 +47,8 @@
               "guides/inbox",
               "guides/ad-welcome-messages",
               "guides/flows",
+              "guides/payments-india",
+              "guides/whatsapp-analytics",
               "guides/groups",
               "guides/calling"
             ]
@@ -63,6 +65,8 @@
             "pages": [
               "billing/overview",
               "billing/whatsapp-rates",
+              "billing/pricing-and-tiers",
+              "billing/auto-recharge",
               "billing/mechanics",
               "billing/meta-message-billing",
               "billing/payment-issues"

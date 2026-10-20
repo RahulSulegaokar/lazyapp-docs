@@ -1,13 +1,51 @@
 ---
 title: "Catalog and products"
-description: "Send Meta Commerce product messages with a catalog id."
+description: "Connect a Meta catalog, set up the shop on your number, and send product messages, carousels and catalog links."
 ---
 
 Product and catalog interactive messages use a Meta Commerce catalog you already manage in Meta. `GET /v1/catalog/products` reads Meta directly. `POST /v1/catalog/sync` copies the catalog into a local cache that lasts one hour. `commerce.catalog_sync` is on by default and can be turned off per connection.
 
-## Catalog id on the connection
+## Shop settings
 
-Store the Meta catalog id on the WhatsApp connection (phone number settings in the console). Product sends still accept `catalog_id` in the interactive payload; the saved value is a default for the inbox and for `GET /v1/catalog/products`.
+A WhatsApp shop starts with a catalog in Meta Commerce Manager. Add products there by hand, with a data feed, or from your store platform. Then connect the catalog to your number and choose what contacts see.
+
+In the console, open **Phone numbers → your number → Advanced → Shop**. Over the API:
+
+```bash
+curl -X PATCH "https://lazyapp.in/v1/connections/{connection}/commerce" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Idempotency-Key: shop-setup-1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "catalog_id": "1234567890",
+    "is_catalog_visible": true,
+    "is_cart_enabled": true
+  }'
+```
+
+**Scope:** `messages:send`. `GET /v1/connections/{connection}/commerce` reads the same settings with `messages:read`.
+
+| Field | Does |
+| --- | --- |
+| `catalog_id` | Connects this Meta catalog to the WhatsApp account and saves it on every number of that account. Send `null` to forget it in LazyApp. Meta has no API to disconnect a catalog, so do that in Commerce Manager |
+| `is_catalog_visible` | Shows the shop icon in the chat header and the catalog on your business profile. Off by default |
+| `is_cart_enabled` | Lets contacts add products to a cart and send it to you as an order. On by default |
+| `order_handoff_url` | An `https://` address LazyApp posts every incoming order to, as well as the `message.received` webhook |
+
+The response:
+
+```json
+{
+  "catalog_id": "1234567890",
+  "connected_catalogs": [{ "id": "1234567890", "name": "Acme shop" }],
+  "is_catalog_visible": true,
+  "is_cart_enabled": true,
+  "order_handoff_url": null,
+  "catalog_link": "https://wa.me/c/919812345670"
+}
+```
+
+`catalog_link` opens your catalog in WhatsApp. Share it anywhere, or send it as a [catalog link](#catalog-links). Product sends still accept `catalog_id` in the interactive payload; the saved value is the default for the inbox and for `GET /v1/catalog/products`.
 
 ## List products
 
@@ -116,6 +154,58 @@ Use `POST /v1/messages` with `type: interactive`. Check `messages.product` / `me
 
 `catalog_message` opens the catalog linked to the WABA on Meta. The optional thumbnail is a product retailer id, not the catalog id.
 
+## Product carousels
+
+A product carousel shows products as cards the contact swipes through. Check `messages.carousel` on [capabilities](/concepts/capabilities).
+
+```json
+{
+  "type": "interactive",
+  "to": "+919812345670",
+  "interactive": {
+    "type": "carousel",
+    "body": { "text": "Our bestsellers this week." },
+    "action": {
+      "cards": [
+        { "card_index": 0, "type": "product", "action": { "product_retailer_id": "sku-tee", "catalog_id": "1234567890" } },
+        { "card_index": 1, "type": "product", "action": { "product_retailer_id": "sku-hoodie", "catalog_id": "1234567890" } }
+      ]
+    }
+  }
+}
+```
+
+In the inbox, choose **Product carousel** as the interactive message type.
+
+## Templates with products
+
+Outside the 24-hour window, products go in [templates](/sending/templates). Create them with these buttons, then fill in the products when you send through `template.features`:
+
+| Template | Button | At send time |
+| --- | --- | --- |
+| Catalog | `CATALOG` (no header) | Optional `thumbnail_product_retailer_id` |
+| Multi-product | `MPM` (text header) | `thumbnail_product_retailer_id` and `sections` |
+| Single product | `SPM` (`PRODUCT` header) | `product_retailer_id` |
+| Product card carousel | Cards with a `PRODUCT` header and one `SPM` or URL button | `product_cards`: comma-separated retailer ids, one card each |
+
+In the template builder, a product card carousel is a carousel with **Product** as the card type. LazyApp builds each card from the number's catalog.
+
+```json
+{
+  "to": "+919812345670",
+  "type": "template",
+  "template": {
+    "name": "weekly_picks",
+    "language": "en",
+    "features": { "product_cards": "sku-tee, sku-hoodie, sku-cap" }
+  }
+}
+```
+
+## Catalog links
+
+`catalog_link` from the shop settings is a plain `https://wa.me/c/…` link. Send it in any text message, or put it in a template URL button. When the contact taps it, WhatsApp opens your catalog.
+
 ## Inbound orders
 
 When a contact submits a WhatsApp cart, LazyApp stores an inbound message with `type` `order`. The structured cart is on `content.order`:
@@ -132,4 +222,6 @@ When a contact submits a WhatsApp cart, LazyApp stores an inbound message with `
 }
 ```
 
-That `content` object is included on `message.received` [webhooks](/webhooks/events).
+That `content` object is included on `message.received` [webhooks](/webhooks/events). If you set `order_handoff_url`, LazyApp also posts `{ "type": "commerce.order", "order": …, "connection": … }` to it.
+
+To take payment for a cart, send a [payment request](/guides/payments-india).
