@@ -30,6 +30,21 @@ curl https://lazyapp.in/v1/templates/media \
 
 Use the handle as `header.example_handle`, or `carousel_cards[].example_handle` for a card. The sample is only for review. You send the real media when you send the template.
 
+Or skip the upload: give a public https URL as `header.example_url` (or `carousel_cards[].example_url`) on `POST /v1/templates`, and LazyApp fetches the file and uploads it for you. That makes a media template one JSON call, which suits setup scripts and manifests.
+
+```json
+{
+  "name": "intake_open",
+  "language": "en",
+  "category": "MARKETING",
+  "header": { "format": "IMAGE", "example_url": "https://cdn.acme.example/campus.jpg" },
+  "body_text": "Admissions for {{1}} are open.",
+  "body_examples": ["Autumn 2027"]
+}
+```
+
+A URL that cannot be fetched, or returns the wrong type or too large a file, is a `422` on `header.example_url`.
+
 Limits: JPEG or PNG images, MP4 video and PDF documents up to 16 MB. A GIF is an MP4 of up to 3.5 MB.
 
 ## Carousels

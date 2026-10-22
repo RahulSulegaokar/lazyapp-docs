@@ -22,8 +22,9 @@ Subscribe to what you handle by listing types in `subscribed_events`, or omit it
 | `reaction.received` | Someone added or removed an emoji reaction. Also still arrives as `message.received` with `type: reaction` |
 | `conversation.started` | First time this contact opens a thread on a connection (not on reopen) |
 | `address.received` | A contact submitted an India [address form](/sending/interactive-messages#address-messages-india). `data.address.values` has the fields |
+| `commerce.order` | A contact sent a cart from your catalog. `data.order` is the message, with the cart in `content.order` (`catalog_id`, `product_items`). It also arrives as `message.received` |
 
-`data.message` includes `conversation_id` (`cnv_…`), `metadata` you attached when sending, the `request_id` of the originating API call, `provider_message_id`, and `contact.bsuid` when Meta provides one. Messages sent to or received in a [group](/guides/groups) carry `group` (`uuid`, `provider_group_id`) and no `conversation_id`. The first message from someone who tapped a Click-to-WhatsApp ad carries the ad in `content.referral` (see [Ad welcome messages](/guides/ad-welcome-messages)).
+`data.message` includes `conversation_id` (`cnv_…`), `metadata` you attached when sending, the `request_id` of the originating API call, `provider_message_id`, `contact.bsuid` when Meta provides one, and `contact.profile_name`: the WhatsApp profile name Meta sent with an inbound message, so you can greet the sender without looking the contact up. Messages sent to or received in a [group](/guides/groups) carry `group` (`uuid`, `provider_group_id`) and no `conversation_id`. The first message from someone who tapped a Click-to-WhatsApp ad carries the ad in `content.referral` (see [Ad welcome messages](/guides/ad-welcome-messages)).
 
 `content` carries the structured parts: `content.group_id` when the message was sent in a WhatsApp group, `content.voicemail.call_id` when it is a voicemail left after a missed call, and `content.automatic_events` once Meta detects a lead or purchase in a chat that began from an ad.
 
@@ -133,7 +134,7 @@ Bans, restrictions and reconnections also move the connection's status, so you g
 | --- | --- |
 | `flow.published` | A flow became sendable |
 | `flow.failed` | Publishing failed, or the data endpoint is unhealthy |
-| `flow.response_received` | A user completed a flow. `data` carries the submission |
+| `flow.response_received` | A contact completed a flow. `data.flow_response` carries the submission, `flow_token` and `message_uuid`. Endpoints restricted to a number receive it for completions on that number |
 | `flow.status_changed` | Meta changed the flow's status (for example `blocked` or `throttled`) or raised an endpoint health alert. `event` is Meta's (`FLOW_STATUS_CHANGE`, `ENDPOINT_ERROR_RATE`, …) and `details` its full value |
 
 ## Workflows

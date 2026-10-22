@@ -15,8 +15,10 @@ The default. LazyApp generates the code, sends it, and verifies it later. You ne
     curl https://lazyapp.in/v1/otp \
       -H "Authorization: Bearer $LAZYAPP_API_KEY" \
       -H "Content-Type: application/json" \
-      -d '{"to": "+919812345670"}'
+      -d '{"to": "+919812345670", "template_name": "login_code", "client_ip": "203.0.113.24"}'
     ```
+
+    `client_ip` is your end user's address, not your server's. It is optional; see [Limits](#limits).
 
     ```json
     {
@@ -43,7 +45,7 @@ The default. LazyApp generates the code, sends it, and verifies it later. You ne
     { "id": "9f8b1c2d-...", "status": "verified", "verified_at": "2026-08-19T11:44:20+00:00" }
     ```
 
-    A wrong code returns `422`. A verified challenge cannot be verified twice.
+    A wrong code returns `422` with `"code": "otp_invalid"`. A verified challenge cannot be verified twice.
   </Step>
 </Steps>
 
@@ -82,13 +84,40 @@ You verify it yourself. LazyApp does not retain the code.
   </Card>
 </CardGroup>
 
+## Limits
+
+Refusals carry a `code`, so your sign-in page can show the right message without matching English text. When waiting is the answer, the response is `429` with a `Retry-After` header and `retry_after` in the body.
+
+| `code` | Status | When |
+| --- | --- | --- |
+| `otp_resend_too_soon` | 429 | A new code was asked for within 30 seconds of the last one to the same number |
+| `otp_daily_limit` | 422 | The number has had 20 codes today |
+| `otp_client_ip_limit` | 429 | One `client_ip` asked for codes for more than 10 different numbers in an hour |
+| `otp_locked` | 429 or 422 | 429: 10 wrong codes in an hour locked the number. While it is locked even the right code is refused and no new code is sent. 422: this challenge used up its attempts; send a new code |
+| `otp_invalid` | 422 | Wrong code |
+| `otp_expired` | 422 | The code is older than 10 minutes |
+| `otp_not_found` | 422 | No pending challenge matches the `id` or `to` |
+| `otp_template_required` | 422 | No authentication template, and the number has not messaged you in the last 24 hours |
+
+```json
+{ "message": "Wait 21 more second(s) before requesting another code.", "code": "otp_resend_too_soon", "retry_after": 21 }
+```
+
+The per-IP rule only applies when you pass `client_ip`. A website sends every sign-in from its own server, so applying the rule to the server's address would stop it after a handful of users. Pass your end user's address and the rule protects you from one person cycling through numbers.
+
+Sending and verifying have separate per-key rate limits (see [Rate limits](/reference/rate-limits)).
+
 ## Test mode
 
-With an `sk_test_` key, nothing reaches a phone and a fixed development code is used, so automated tests can complete the whole flow.
+An `sk_test_` key sends through your sandbox number, so test codes reach real phones on your test recipient list and verify exactly as they do live.
 
 ## Templates
 
-OTPs need an approved `AUTHENTICATION` template. Pass `template_name` to choose one, or let LazyApp use the workspace default. Authentication templates support one-tap autofill and copy-code buttons, which materially improve completion rates — worth setting up rather than sending a plain code.
+OTPs need an approved `AUTHENTICATION` template. Pass `template_name` to choose one, or let LazyApp use the workspace default. Authentication templates support one-tap autofill and copy-code buttons, which materially improve completion rates.
+
+Without a template, a code can only go as plain text while the number has messaged you in the last 24 hours, because WhatsApp refuses free-form messages outside that window. Anywhere else the request is refused with `otp_template_required` rather than sent to fail.
+
+The template goes out in the `language` you pass. Without one, LazyApp uses the template's language when it has only one, so an `en` or `hi` template works without configuration.
 
 ## Webhooks
 

@@ -48,6 +48,8 @@ At least one of `phone_number`, `bsuid`, or `external_id` is required.
 
 Optional fields: `username`, `email`, `preferred_language`, `timezone`, `attributes` (free-form JSON for CRM fields).
 
+`attributes` is merged, not replaced, on both the upsert and `PATCH /v1/contacts/{contact}`: the keys you send are set, a key you set to `null` is removed, and every other key stays. So your CRM sync can write `company` while a lead-scoring job writes `lead_score` without either erasing the other. Send `"attributes": null` to clear them all.
+
 `PATCH /v1/contacts/{contact}` accepts the same body fields. Look up `{contact}` by uuid, phone number, `external_id`, or `bsuid`.
 
 ### Service window on read
@@ -69,6 +71,8 @@ Cursor-paginated (`next_cursor`). `q` matches phone, `external_id`, or email.
 | --- | --- |
 | `POST /v1/contacts/{contact}/consent` | Record opt-in evidence (`consent_text`, `proof_reference`, `captured_by`) |
 | `POST /v1/contacts/{contact}/suppress` | Opt out of `marketing` or `all` sends |
+
+Contacts can also opt out by message. `STOP`, `UNSUBSCRIBE` or `REMOVE` opts out of marketing, `STOP ALL` out of everything, and `START` or `UNSTOP` opts back in to marketing (translations in Hindi, Spanish, Portuguese, Arabic and French work too). The whole message has to be the keyword. A plain "yes" never opts anyone back in: in a conversation it answers whatever you just asked.
 
 Granting marketing consent lifts a matching suppression. See [Broadcasts](/sending/broadcasts) for how exclusions work at send time.
 
@@ -133,7 +137,25 @@ curl -X POST https://lazyapp.in/v1/contact-segments \
   }'
 ```
 
-Filters match the console: `tags`, `attribute`, `consent_status`, `suppressed`. Use the segment `uuid` as `contact_segment_uuid` on [broadcasts](/sending/broadcasts).
+Every filter you give must match:
+
+| Filter | Shape | Matches |
+| --- | --- | --- |
+| `tags` | `{ "mode": "any" \| "all", "names": [...] }` | Contacts with any (or all) of the tags. Name tags by `names` or `uuids`, as [`GET /v1/tags`](#tags) returns them |
+| `attribute` | `{ "key": "tier", "equals": "vip" }` | An exact attribute value |
+| `consent_status` | `"granted"`, `"revoked"` or `"unknown"` | Marketing consent; `unknown` means none was recorded |
+| `suppressed` | `true` or `false` | Contacts who did, or did not, opt out of everything |
+
+For example, everyone you tagged over the API for an intake announcement:
+
+```json
+{
+  "name": "Intake alerts",
+  "filters": { "tags": { "mode": "any", "names": ["admissions:intake-alerts"] } }
+}
+```
+
+A tag name or uuid that does not exist in the workspace is refused with `422`, so a typo cannot silently produce an empty audience. Reads return each tag's `names`, `uuids` and internal `ids`. Use the segment `uuid` as `contact_segment_uuid` on [broadcasts](/sending/broadcasts).
 
 ## Business profile
 
