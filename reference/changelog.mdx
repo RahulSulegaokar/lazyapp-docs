@@ -3,6 +3,25 @@ title: "Changelog"
 description: "What shipped, newest first."
 ---
 
+<Update label="2026-10-23" description="v1">
+
+**Fixes from building real apps on the API.**
+
+- Free-form replies in an open conversation count against the contact's last message (10 each), not the hourly per-recipient cap, so a bot no longer stops answering mid-conversation. See [Rate limits](/reference/rate-limits#send-velocity-abuse-guards).
+- `POST /v1/flows` returns the data-endpoint `endpoint_secret` once, and `POST /v1/flows/{flow}/rotate-endpoint-secret` replaces it. See [Flows](/guides/flows#verify-the-signature).
+- `flow.response_received` reaches endpoints restricted to the number the flow was completed on.
+- `PATCH /v1/webhooks/{webhook}` updates an endpoint in place. The OpenAPI `subscribed_events` enum now lists every event.
+- Message webhooks carry `contact.profile_name`. `commerce.order` is in the [event reference](/webhooks/events).
+- A plain "yes" (in any language) no longer restores marketing consent after STOP. START and UNSTOP still do.
+- OTP: refusals carry a `code`, waiting is a `429` with `Retry-After`, the per-IP rule uses the optional `client_ip`, send and verify have separate limits, `language` is accepted, a code needs an authentication template outside the 24-hour window, and a locked number stays locked for the right code too. See [Verify](/sending/verify#limits).
+- Contact `attributes` are merged instead of replaced.
+- Segments filter tags by `names` or `uuids`. Broadcasts validate `variable_map` and document `header_media`.
+- `POST /v1/events` takes `"deliver": false` to record an event without sending, and `/v1/event-definitions` defines your own event types.
+- `PATCH /v1/conversations/{id}` assigns, sets status and tags; `/v1/conversations/{id}/notes` adds internal notes.
+- `POST /v1/templates` accepts `header.example_url` and `carousel_cards[].example_url` instead of a separate sample upload.
+
+</Update>
+
 <Update label="2026-10-08" description="v1">
 
 **API reference.** The OpenAPI spec now includes groups, `POST /v1/calls`, catalog sync, WhatsApp funding, and the rest of the Meta-compatible proxy: media retrieve and delete, business profile, and block users.

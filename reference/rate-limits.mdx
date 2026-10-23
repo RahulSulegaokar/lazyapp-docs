@@ -22,7 +22,7 @@ Separate keys do **not** share a bucket. Create extra keys for access control (s
 
 Requests with a missing or invalid key are limited separately, **per IP** (`30` failed auth attempts per minute by default), so failed authentication cannot consume a valid key's budget.
 
-OTP endpoints use a tighter per-key limiter on top of the general `/v1` limit.
+`POST /v1/otp` and `POST /v1/otp/verify` each have their own per-key limiter on top of the general `/v1` limit: 60 sends and 120 verifications a minute by default. They are counted separately, so a busy sign-in page is not throttled by its own verifications. Abuse is held back per recipient instead (see [Verify](/sending/verify#limits)).
 
 Need a higher ceiling? Email [support@lazyapp.in](mailto:support@lazyapp.in) with your expected peak.
 
@@ -34,7 +34,10 @@ Independent of HTTP rate limits, LazyApp refuses sends that look abusive **befor
 | --- | --- | --- |
 | Workspace burst | 600 sends / minute / workspace·mode | `send_burst_limit` |
 | Per recipient | 20 sends / hour / recipient | `recipient_rate_limit` |
+| Replies in a conversation | 10 replies per message the contact sends, while its 24-hour window is open | `recipient_rate_limit` |
 | Failure rate | ≥ 50% failed in the last 50 outbound (15 min window) | `failure_rate_paused` |
+
+A free-form reply inside an open [customer service window](/sending/messages#the-24-hour-window) counts against the message the contact just sent, not the hourly cap, so a shop or booking bot can keep answering for as long as the contact keeps writing. Each new message from the contact allows 10 more replies. Templates, and sends outside a window, always count toward the hourly cap.
 
 These return `422` with `code`, not `429`. Slow down, fix bad recipients, or contact support to raise a ceiling. See [Errors](/concepts/errors).
 

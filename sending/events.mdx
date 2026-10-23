@@ -74,15 +74,61 @@ By phone number:
 { "recipient": { "phone_number": "+919812345670" } }
 ```
 
+or with `type` and `value`, the same shape as a contact:
+
+```json
+{ "recipient": { "type": "phone_number", "value": "+919812345670" } }
+```
+
 Or by contact, when you already track people in LazyApp:
 
 ```json
 { "recipient": { "type": "contact_id", "value": "9f8b1c2d-4e5f-4a6b-8c7d-0e1f2a3b4c5d" } }
 ```
 
+## Record without sending
+
+Not every business event should message the customer. A lead being qualified, a visit booked by an agent or a ticket created are worth keeping, and worth starting a workflow from, without a WhatsApp message. Send `"deliver": false`:
+
+```json
+{
+  "type": "enquiry.received",
+  "recipient": { "phone_number": "+919812345670" },
+  "properties": { "stage": "qualified", "score": 72 },
+  "deliver": false,
+  "idempotency_key": "lead-42-qualified"
+}
+```
+
+```json
+{ "uuid": null, "event_uuid": "7d1c…", "status": "recorded", "type": "enquiry.received" }
+```
+
+The answer is `202`. The event appears in `GET /v1/events` with status `recorded` and starts `api_event` workflows. It needs no template mapping: a type with no mapping is refused only when you ask for it to be delivered.
+
 ## Event types
 
 `type` accepts the built-in library plus any event you define in your workspace. Defining your own also lets you declare a property schema, so a malformed event is rejected at the API rather than producing a message with an empty placeholder.
+
+Define a type over the API with `PUT /v1/event-definitions/{type}`. Namespace it (`real_estate.visit_booked`, `clinic.appointment_booked`) so two products sharing a workspace never fight over one type:
+
+```bash
+curl -X PUT https://lazyapp.in/v1/event-definitions/real_estate.visit_booked \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Visit booked",
+    "schema": {
+      "required": ["property_id"],
+      "properties": {
+        "property_id": { "type": "string" },
+        "slot": { "enum": ["morning", "evening"] }
+      }
+    }
+  }'
+```
+
+The call is idempotent, so run it from your setup script on every deploy. `GET /v1/event-definitions` lists your types, and `DELETE /v1/event-definitions/{type}` archives one: new events of that type are refused, and past ones stay in the history.
 
 ## Idempotency
 
