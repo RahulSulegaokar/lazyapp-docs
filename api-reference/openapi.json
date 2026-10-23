@@ -1935,16 +1935,6 @@
               }
             }
           },
-          "409": {
-            "description": "Changed in the inbox at the same moment (`conversation_changed`). Fetch it and try again.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
           "422": {
             "description": "Validation failed.",
             "content": {
@@ -1957,6 +1947,16 @@
           },
           "429": {
             "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Changed in the inbox at the same moment (`conversation_changed`). Fetch it and try again.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4927,16 +4927,6 @@
               }
             }
           },
-          "202": {
-            "description": "Recorded without sending (`deliver: false`).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EventRecorded"
-                }
-              }
-            }
-          },
           "401": {
             "description": "Missing or invalid API key.",
             "content": {
@@ -4976,6 +4966,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Recorded without sending (`deliver: false`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventRecorded"
                 }
               }
             }
@@ -31262,7 +31262,6 @@
           }
         }
       },
-<<<<<<< HEAD
       "PlatformCustomerUsage": {
         "type": "object",
         "description": "Usage for one customer and one billing period, in this key's mode. LazyApp adds 0% to Meta's rates, so charges are non-zero only for sends LazyApp pays Meta for.",
@@ -31555,7 +31554,9 @@
               "prepaid",
               "postpaid"
             ]
-=======
+          }
+        }
+      },
       "FlowCreated": {
         "allOf": [
           {
@@ -31833,7 +31834,6 @@
           },
           "suppressed": {
             "type": "boolean"
->>>>>>> origin/main
           }
         }
       }
