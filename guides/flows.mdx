@@ -7,6 +7,10 @@ WhatsApp **Flows** are Meta-hosted interactive forms (screens of inputs and navi
 
 Do not confuse Flows with [workflows](/api-reference/workflows/list-workflows) (LazyApp automation graphs) or [templates](/sending/templates) (approved outbound message shells). A Flow can be attached to a template button or sent as an interactive message inside the [24-hour window](/sending/messages#the-24-hour-window).
 
+<Note>
+WhatsApp Flows are on the Growth and Pro plans. On a smaller plan you can still open and delete existing Flows, but not create, change or publish them, or send them from the inbox. Test mode is never limited. See [Plans and limits](/billing/pricing-and-tiers#feature-gating).
+</Note>
+
 <Warning>
 **Coexistence numbers** report `flows: false` and `flows.data_endpoint: false` on [`GET /v1/capabilities`](/concepts/capabilities). Build Flow onboarding for Cloud-API-only numbers. See [WhatsApp Business app coexistence](/guides/connecting-whatsapp#whatsapp-business-app-coexistence).
 </Warning>

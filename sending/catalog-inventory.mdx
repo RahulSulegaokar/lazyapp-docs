@@ -7,6 +7,10 @@ Your products live in a Meta catalog. Until now you edited them in Meta Commerce
 
 Every change goes to Meta through its Catalog Batch API. Meta applies changes in the background, usually within a minute, so LazyApp queues each change, sends it, and keeps checking until Meta is done. Rows Meta refuses come back with the reason in plain words.
 
+<Note>
+Catalog is on the Growth and Pro plans. On a smaller plan you can still see and remove products, but not add, edit or upload them. Test mode is never limited. See [Plans and limits](/billing/pricing-and-tiers#feature-gating).
+</Note>
+
 <Warning>
   Changing a catalog needs Meta's `catalog_management` permission for LazyApp. Meta is still reviewing that request. Until it is approved, **Products** shows your products and the full flow, marked **Waiting for Meta approval**, and the API returns `403` with `code: meta_approval_pending`. Reading products works today.
 </Warning>

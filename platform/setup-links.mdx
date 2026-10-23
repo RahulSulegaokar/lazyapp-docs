@@ -48,7 +48,13 @@ For the full connect story (console vs platform, webhooks, reconnect), see [Conn
 | `locale` | Renders the connect screen in their language |
 | `success_webhook_url` / `failure_webhook_url` | Per-link callbacks, in addition to your workspace webhooks |
 | `template_set` | Starter templates to apply when the customer connects. Valid keys from [`GET /v1/templates/sets`](/api-reference/templates/list-starter-template-sets) |
-| `meta_billing_mode` | `customer_managed` (default) or `partner_managed`. Stored on the link and applied to the WhatsApp Business Account. It cannot be changed later on that account |
+| `meta_billing_mode` | `customer_managed` (default) or `partner_managed`. Stored on the link and applied to the WhatsApp Business Account. It cannot be changed later on that account. See [Who pays Meta](#who-pays-meta) |
+
+## Who pays Meta
+
+With `customer_managed`, the default, Meta bills the business for its messages on its own Meta payment method, at Meta's rates. LazyApp charges nothing per message, and your platform wallet pays only ₹999 a month for the connected number.
+
+Use `partner_managed` only when LazyApp pays Meta for that account through a LazyApp credit line. Then each paid message is debited from a wallet: Meta's rate, plus 5% when the WhatsApp account is not billed in USD and a further 5% for messages not sent through LazyApp. See [Wallets](/billing/wallets#platform-teams). Choose deliberately: the mode is fixed for the account once the customer connects. See [How platform billing works](/platform/overview#how-platform-billing-works) and [Meta message billing](/billing/meta-message-billing).
 
 ## Starter templates
 

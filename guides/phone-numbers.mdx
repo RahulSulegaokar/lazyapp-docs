@@ -3,7 +3,7 @@ title: "Phone numbers"
 description: "List your numbers, check whether they can send, register and verify them, change the display name, apply for the blue tick and add more numbers to the same WhatsApp account."
 ---
 
-A WhatsApp number is a normal phone line with the WhatsApp Cloud API turned on. LazyApp does **not** sell or port numbers: you connect a number you control through [Embedded Signup](/guides/connecting-whatsapp), or claim the shared **test** sandbox in the console. Once a number is connected, everything on this page works from the console (**Connections → Settings** on a number) and from the API.
+A WhatsApp number is a normal phone line with the WhatsApp Cloud API turned on. LazyApp does **not** sell or port numbers: you connect a number you control through [Embedded Signup](/guides/connecting-whatsapp), or claim the shared **test** sandbox in the console. The test sandbox is free; connecting your own number needs a [plan](/billing/pricing-and-tiers), and an extra number beyond the plan's allowance is an add-on. Once a number is connected, everything on this page works from the console (**Connections → Settings** on a number) and from the API.
 
 Every endpoint takes the connection `uuid` from [`GET /v1/connections`](/api-reference/connections/list-connections). Reads need `messages:read`. Changes need [`connections:write`](/reference/scopes), so a key that only sends messages cannot deregister a number or rename the business.
 

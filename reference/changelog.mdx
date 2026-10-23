@@ -5,6 +5,12 @@ description: "What shipped, newest first."
 
 <Update label="2026-10-23" description="v1">
 
+**Flat plans.** Flat monthly plans (Starter, Growth and Pro) replace the per-message charge. LazyApp adds 0% to Meta's rates: Meta bills each message to the business's own payment method, and the plan is what pays LazyApp. Test mode stays free. See [Plans and limits](/billing/pricing-and-tiers).
+
+**Live keys need Pro.** A `sk_live_` key on a workspace below Pro gets `402` with `code: plan_limit_reached`. A broadcast past the month's live broadcast sends, or a number past the plan's numbers, returns `422` with a plain message. Test keys are never plan-limited. See [Errors](/concepts/errors#402-plan-limit-reached).
+
+**Platform customers.** `/v1/platform/customers` no longer stores or returns `markup_bps`, `pricing_mode`, `category_markups` or `platform_fee`. Values you still send are ignored, and the request succeeds. Customer usage no longer includes `wholesale_total` or `marked_up_total`.
+
 **Fixes from building real apps on the API.**
 
 - Free-form replies in an open conversation count against the contact's last message (10 each), not the hourly per-recipient cap, so a bot no longer stops answering mid-conversation. See [Rate limits](/reference/rate-limits#send-velocity-abuse-guards).
@@ -25,8 +31,6 @@ description: "What shipped, newest first."
 <Update label="2026-10-08" description="v1">
 
 **API reference.** The OpenAPI spec now includes groups, `POST /v1/calls`, catalog sync, WhatsApp funding, and the rest of the Meta-compatible proxy: media retrieve and delete, business profile, and block users.
-
-**Pricing.** Guides match the wallet. Recharge packs are ₹999, ₹2,500, ₹5,000, and ₹10,000. There is no monthly plan and no welcome credit. India service messages are charged. A `402` means the wallet is empty, or a configured message cap is used up.
 
 </Update>
 

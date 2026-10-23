@@ -41,7 +41,7 @@ This page is for the LazyApp team and implementers comparing surfaces to Zernio.
 | Verify | `/v1/otp` | Covered |
 | Analytics / rates | `/v1/analytics/messaging`, `/v1/pricing/rates` | Covered (thin) |
 
-**LazyApp-only:** `/v1/events`, automation packs, `/v1/capabilities`, Meta-compat `/meta/whatsapp/...`, platform customers / setup links / embed tokens, contact suppress/consent/merge, wallet `402`, idempotency on writes.
+**LazyApp-only:** `/v1/events`, automation packs, `/v1/capabilities`, Meta-compat `/meta/whatsapp/...`, platform customers / setup links / embed tokens, contact suppress/consent/merge, plan `402` (`plan_limit_reached`), idempotency on writes.
 
 ## Product — build later
 
@@ -64,7 +64,7 @@ This page is for the LazyApp team and implementers comparing surfaces to Zernio.
 | Conversation-centric inbox create | Recipient-centric `POST /v1/messages` |
 | Unified inbox (IG/FB comments + reviews + DMs) | WhatsApp DMs only |
 | Multi-network (IG, FB, Telegram, SMS) | WhatsApp-only |
-| Account-days / social-seat billing | Wallet + plans + platform customer billing |
+| Account-days / social-seat billing | Flat monthly plans; Meta bills messages directly, 0% added |
 | SSO / SCIM | Not built |
 | Raw Meta webhook forward | LazyApp-shaped payloads only |
 | Serverless webhook/Flow functions | Customer infra + workflows |
@@ -72,7 +72,7 @@ This page is for the LazyApp team and implementers comparing surfaces to Zernio.
 | MCP server | Not a public surface |
 | Zernio 3-step broadcast flow | Single create is deliberate |
 | Zernio sandbox sessions API | Test mode + console claim + test recipients |
-| Zernio Usage plan (10k free outbound / mo) | Subscription + prepaid wallet + free rules |
+| Zernio Usage plan (10k free outbound / mo) | Flat monthly plans with monthly broadcast send limits; test mode free |
 
 ## Docs — Zernio pages vs LazyApp
 
@@ -90,7 +90,7 @@ This page is for the LazyApp team and implementers comparing surfaces to Zernio.
 | Inbox | `guides/inbox.mdx` + `platform/inbox.mdx` + embeds | Done (recipient-centric; console for typing/archive) |
 | Flows | `guides/flows.mdx` + API reference | Done |
 | CTWA | — | Skip (referral passthrough on webhooks only) |
-| Pricing & costs | `billing/overview.mdx`, `billing/whatsapp-rates.mdx`, `billing/mechanics.mdx` | Done |
+| Pricing & costs | `billing/overview.mdx`, `billing/pricing-and-tiers.mdx`, `billing/whatsapp-rates.mdx`, `billing/mechanics.mdx` | Done |
 | Media & limits reference | `reference/media-and-limits.mdx` + `sending/media.mdx` | Done |
 | Migrate from Kapso | `migrating/from-kapso.mdx` | Done |
 | Migrate from Cloud API | `migrating/from-cloud-api.mdx` | Done |
@@ -101,7 +101,7 @@ This page is for the LazyApp team and implementers comparing surfaces to Zernio.
 - Verify OTP, events, automation packs
 - Platform customers, setup links, embed inbox
 - Meta proxy for Kapso / Cloud API migrants
-- Idempotency, cursor pagination, wallet usage ledger
+- Idempotency, cursor pagination, usage ledger
 
 ## Suggested build order
 

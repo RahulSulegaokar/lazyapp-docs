@@ -5,6 +5,10 @@ description: "How LazyApp webhook deliveries work, including retries, idempotenc
 
 Sending is synchronous; everything after it is not. Delivery reports, replies, template approvals, and quality changes arrive as signed webhooks.
 
+<Note>
+Webhooks are on the Pro plan, as are live API keys. On a smaller plan you cannot add a webhook endpoint in live mode. Test mode is never limited. See [Plans and limits](/billing/pricing-and-tiers#feature-gating).
+</Note>
+
 ## How to think about webhooks
 
 - Subscribe only to the events you actually handle.

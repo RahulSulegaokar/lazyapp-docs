@@ -23,6 +23,12 @@ Console sign-in (password, Google, passkeys, two-step verification) is covered u
 
 The prefix is not decoration — it determines the workspace mode the key operates in. A test key cannot read live data and a live key cannot read test data, so the two never mix.
 
+### Keys and your plan
+
+Test keys are free on every workspace, with or without a plan. Test mode runs on the shared test number and is never plan-limited, so you can build the whole integration before you pay anything.
+
+Live keys need the **Pro** plan. On any smaller plan, or no plan, a live key gets `402` with `code: plan_limit_reached`. Connecting your own WhatsApp number needs a plan too. See [Plans and limits](/billing/pricing-and-tiers#plan-limit-reached).
+
 <Warning>
   A key is displayed once, when you create it. LazyApp stores only a hash, so a lost key
   cannot be recovered — create a new one and revoke the old.

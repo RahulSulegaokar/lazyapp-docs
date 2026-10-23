@@ -7,7 +7,8 @@ Before you can send, a workspace needs a connected WhatsApp number. LazyApp is W
 
 ## How to think about it
 
-- **Own workspace:** connect from the LazyApp console (Embedded Signup).
+- **Own workspace:** connect from the LazyApp console (Embedded Signup). Connecting your own number needs a [plan](/billing/pricing-and-tiers), and each plan includes a set number of numbers; the shared test number is free.
+- **Meta bills messages, not LazyApp.** Add a payment method to the WhatsApp Business Account in Meta. Meta charges it at Meta's rates, and LazyApp adds 0%. See [Meta message billing](/billing/meta-message-billing).
 - **Your customers' numbers:** use [setup links](/platform/setup-links) so each [platform customer](/platform/overview) connects into their own workspace.
 - Confirm from webhooks (`connection.connected` / `customer.connected`), not from the browser redirect alone.
 - After connect, read [capabilities](/concepts/capabilities) for that number — calling, messaging limits, and quality are per connection.
