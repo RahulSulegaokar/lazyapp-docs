@@ -17,6 +17,8 @@ These routes are on the platform API key. Scopes are `billing:read` for reads an
 
 `meta_billing_mode` is chosen when you create the setup link and is not changed by these routes. See [Meta message billing](/billing/meta-message-billing).
 
+Funding only matters for partner-managed accounts, where LazyApp pays Meta through a LazyApp credit line. On those, each paid message is debited from a wallet: Meta's rate, plus 5% when the WhatsApp account is not billed in USD and a further 5% for messages not sent through LazyApp. See [Wallets](/billing/wallets#platform-teams). Customer-managed accounts, the default, are billed by Meta directly and cost your wallet nothing beyond ₹999 a month per connected number. See [How platform billing works](/platform/overview#how-platform-billing-works).
+
 Calling usage is included only when every visible account currency is USD. Otherwise the coverage reason is `calling_requires_usd_waba`.
 
 Revoke is local. It marks the portfolio revoked and pauses paid messages. It does not call Meta, and it does not detach a credit line that was never attached.

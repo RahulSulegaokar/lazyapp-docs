@@ -5,6 +5,10 @@ description: "Connect a Meta catalog, set up the shop on your number, and send p
 
 Product and catalog interactive messages use a Meta Commerce catalog you already manage in Meta. `GET /v1/catalog/products` reads Meta directly. `POST /v1/catalog/sync` copies the catalog into a local cache that lasts one hour. `commerce.catalog_sync` is on by default and can be turned off per connection.
 
+<Note>
+Catalog is on the Growth and Pro plans. On a smaller plan you cannot add or change products, or send product messages from the inbox. Test mode is never limited. See [Plans and limits](/billing/pricing-and-tiers#feature-gating).
+</Note>
+
 ## Shop settings
 
 A WhatsApp shop starts with a catalog in Meta Commerce Manager. Connect the catalog to your number and choose what contacts see. Then add products in LazyApp under **Products** or with `POST /v1/catalog/items` (see [Manage products](/sending/catalog-inventory)), or keep using Commerce Manager, a data feed or your store platform.

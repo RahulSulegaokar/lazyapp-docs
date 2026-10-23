@@ -110,6 +110,19 @@ Prefer LazyApp scheduling: set `send_at` (and optional `ttl_seconds`) so each me
 
 For bulk template sends to a segment, use [broadcasts](/sending/broadcasts) — LazyApp paces them to the number's messaging tier.
 
+## Billing refusals
+
+A send refused for billing returns `402` with a `message`, and a `code` when there is one to branch on. Retrying the same request will not help, so show the tenant the reason and stop:
+
+| Cause | What to do |
+| --- | --- |
+| The customer is suspended | Restore it with `POST /v1/platform/customers/{customer}/restore` |
+| A `prepaid` customer's wallet is at zero | Add to `wallet_balance_cents`, or move the customer to `inherit` |
+| The customer reached `spending_limit_cents` this month | Raise the limit, or wait for the next month |
+| The wallet paying a [partner-managed](/platform/overview#who-pays-meta) number is empty (`insufficient_credits`, `service_credits_exhausted`) | Add money to that wallet |
+
+On a customer-paid number — the default — Meta bills the business directly and LazyApp charges nothing per message, so the spending limit and empty-wallet refusals never trigger. A `prepaid` customer at zero is still refused, though, which is why customer-paid customers belong on `inherit`. See [How platform billing works](/platform/overview#how-platform-billing-works).
+
 ## Outcomes come from webhooks
 
 The create response means *accepted* — `status: "sent"` (or a scheduled id for `202`). What happens next arrives on [message webhooks](/webhooks/events#messages):
@@ -154,6 +167,7 @@ You can also [`GET /v1/messages/{uuid}`](/api-reference/messages/retrieve-a-mess
 - [ ] Upload media in the tenant's workspace; reuse `media_id`
 - [ ] Prefer `send_at` / broadcasts over synchronized cron storms
 - [ ] Status from webhooks routed by `customer.external_id` — not from polling
+- [ ] Treat `402` as a billing state to show the tenant, not an error to retry
 
 ## Related
 

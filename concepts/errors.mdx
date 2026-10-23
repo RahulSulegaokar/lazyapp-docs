@@ -27,9 +27,10 @@ Send refusals also carry a stable `code` so your client can branch without strin
 | `send_burst_limit` | Workspace hit its per-minute send ceiling | Back off; see [rate limits](/reference/rate-limits) |
 | `recipient_rate_limit` | Too many messages to this contact in the last hour | Slow down to this recipient |
 | `failure_rate_paused` | Most recent outbound messages failed | Fix recipients / connection before retrying |
-| `insufficient_credits` | Partner-managed wallet is empty | Top up. Returns `402` |
-| `service_credits_exhausted` | Service paused after a settled charge on an empty wallet | Top up. Returns `402` |
-| `plan_message_allowance_exhausted` | A message cap configured on the account is used up | The public wallet has no cap, so this does not fire there. Returns `402` |
+| `plan_limit_reached` | A live key on a workspace below Pro. The API and webhooks are Pro features | Change the plan or buy an add-on in **Billing**. Returns `402`. See [below](#402-plan-limit-reached) |
+| `insufficient_credits` | LazyApp pays Meta for this number (partner-managed funding) and the wallet that covers it is empty, or a monthly spending limit set on the account is reached | Add money to the wallet, or raise the limit. Returns `402` |
+| `service_credits_exhausted` | Service sends paused on a partner-managed number after a settled charge, with the wallet at zero | Add money to the wallet. Returns `402` |
+| `plan_message_allowance_exhausted` | A message cap configured on the account is used up | No current plan sets a message cap, so this does not fire on standard plans. Returns `402` |
 | `brand_paused` | The brand owner paused sending | Wait until sending is turned back on. Returns `422` |
 
 Check `service_window` on [`GET /v1/contacts/{contact}`](/api-reference/contacts/retrieve-a-contact) before sending to avoid the closed-window refusal.
@@ -53,13 +54,30 @@ Validation failures add a per-field `errors` map:
 }
 ```
 
+## 402 plan limit reached
+
+LazyApp's plans decide what a workspace can do in live mode. When a request asks for something the plan does not include, the API answers `402 Payment Required` instead of doing part of the work:
+
+```json
+{
+  "message": "The API is on the Pro plan. Upgrade in Billing to use live keys. Test keys keep working.",
+  "code": "plan_limit_reached"
+}
+```
+
+That exact message is what a **live** key gets on any workspace below Pro. The API and webhooks are Pro features, so the check runs on every live request, before the endpoint itself. Other plan limits come back differently through the API today: a broadcast that would go past the month's live broadcast sends, or connecting a number past your plan's numbers, returns `422` with a plain `message` (and, for numbers, an `errors` entry on `phone_number_id`), not `plan_limit_reached`.
+
+**Test keys are never plan-limited.** Test mode runs on the shared test number, so a `sk_test_` key keeps working on any plan, or none. Build against test, then upgrade before you switch to `sk_live_`.
+
+The body is the same `message` + `code` shape as a send refusal above, with no `errors` map. Branch on `code`, not on the status alone: a `402` can also mean `insufficient_credits` on a partner-managed number. Retrying will not help until the plan changes. See [Plans and limits](/billing/pricing-and-tiers#plan-limit-reached).
+
 ## Status codes
 
 | Code | Meaning | Retry? |
 | --- | --- | --- |
 | `400` | Malformed request | No — fix the request |
 | `401` | Missing or invalid API key | No |
-| `402` | Partner-managed wallet is empty, or a configured message cap is used up | After topping up |
+| `402` | Your plan does not cover this (`plan_limit_reached`), or a wallet that pays Meta for a partner-managed number is empty | After changing the plan or adding money |
 | `403` | Key lacks the scope, or is restricted from this number | No |
 | `404` | Not found in this workspace | No |
 | `409` | An idempotent request with this key is still running | Yes, after a pause |
@@ -80,8 +98,8 @@ Apply the same rule to your own client:
     [Idempotency-Key](/concepts/idempotency) so a retry cannot double-send.
   </Card>
   <Card title="Do not retry" icon="ban">
-    `400`, `401`, `403`, `404`, `422`. The same request will fail the same way. Surface it
-    and fix the cause.
+    `400`, `401`, `402`, `403`, `404`, `422`. The same request will fail the same way. Surface it
+    and fix the cause. A `402` clears only once the plan or wallet changes.
   </Card>
 </CardGroup>
 

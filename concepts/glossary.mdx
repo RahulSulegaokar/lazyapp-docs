@@ -5,6 +5,10 @@ description: "Every LazyApp term defined once — workspace vs connection vs mod
 
 The terms the docs and the API use, defined once. The ones people mix up most: a **workspace** is your whole tenant, a **connection** is a WhatsApp Business Account and its numbers inside it, and a **platform customer** is a reseller's end customer — each with their own isolated workspace.
 
+### Add-on
+
+Extra capacity bought on top of a [plan](#plan): an extra member or an extra number, each billed monthly or yearly with the plan. See [Plans and limits](/billing/pricing-and-tiers).
+
 ### API key
 
 Your bearer credential (`Authorization: Bearer …`). Prefix `sk_test_` or `sk_live_` selects the [mode](#mode). Keys carry [scopes](/reference/scopes) and optional phone-number / IP restrictions — see [Authentication](/authentication).
@@ -69,9 +73,13 @@ One outbound or inbound WhatsApp message. Status moves `queued → sent → deli
 
 Meta's id for a specific WhatsApp Business phone number on a [connection](#connection). Pass it on send when the workspace has more than one number.
 
+### Plan
+
+The flat monthly subscription (Starter, Growth or Pro) that pays LazyApp. It sets how many numbers and members a workspace has, its live broadcast sends a month, and which features it gets; live API keys and webhooks need Pro. LazyApp adds 0% to Meta's message rates: Meta bills messages to the business directly. [Test mode](#mode) is free and never plan-limited. A live key below Pro gets `402` `plan_limit_reached`. See [Plans and limits](/billing/pricing-and-tiers).
+
 ### Platform
 
-A LazyApp workspace flagged as a reseller: it owns [platform customers](#platform-customer), issues setup links, and can act on a customer's behalf with `X-LazyApp-Customer`. See [Build a platform](/platform/overview).
+A LazyApp workspace for a platform team: it owns [platform customers](#platform-customer), issues setup links, and can act on a customer's behalf with `X-LazyApp-Customer`. See [Build a platform](/platform/overview).
 
 ### Platform customer
 
@@ -84,6 +92,10 @@ Meta's `GREEN` / `YELLOW` / `RED` signal for a number, exposed on [capabilities]
 ### Request id (`X-Request-Id`)
 
 Correlation id on every `/v1` response. Echo your own or accept LazyApp's. For support tickets, not for idempotency — use [`Idempotency-Key`](#idempotency-key).
+
+### Reseller (brand)
+
+A partner who offers LazyApp under their own brand, on their own host. Each client signs up on that host and gets their own [workspace](#workspace); the reseller pays LazyApp's [plan](#plan) price for each client from the reseller's [wallet](#wallet) and bills clients however they like, outside LazyApp. Distinct from a [platform](#platform), which integrates through the API. See [Resellers](/platform/resellers).
 
 ### Scope
 
@@ -107,11 +119,11 @@ LazyApp's OTP send/check API for phone verification flows. See [Verify](/sending
 
 ### WABA
 
-WhatsApp Business Account — Meta's container for your business numbers. LazyApp stores it as part of a [connection](#connection). Outbound sends are metered on LazyApp's [usage ledger](/billing/overview); Meta may also require a payment method on the WABA depending how the number was connected. See [WhatsApp message rates](/billing/whatsapp-rates).
+WhatsApp Business Account — Meta's container for your business numbers. LazyApp stores it as part of a [connection](#connection). Meta bills messages to the WABA's own payment method at Meta's rates, and LazyApp adds 0%. See [Meta message billing](/billing/meta-message-billing) and [WhatsApp message rates](/billing/whatsapp-rates).
 
 ### Wallet
 
-Prepaid balance on a workspace (or [platform customer](#platform-customer)) that billable message usage draws down. Empty wallet or spending limit → HTTP `402`. See [Pricing](/billing/overview) and [How billing works](/billing/mechanics).
+Prepaid INR balance, topped up by card with **Add money**. Only two kinds of account have one: a [reseller](#reseller-brand), whose wallet pays LazyApp's plan price for each client workspace, and a [platform](#platform) team, whose wallet pays the monthly charge per connected customer number (and Meta's charges, when LazyApp pays Meta for a number). An ordinary workspace has no wallet: its [plan](#plan) is billed to a card, and Meta bills its messages directly. See [Wallets](/billing/wallets).
 
 ### Webhook
 

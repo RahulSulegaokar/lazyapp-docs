@@ -6,7 +6,7 @@ description: "Template sends to many contacts, with compliance built in."
 A broadcast sends one approved **marketing** template to a saved segment or an explicit list of phone numbers. LazyApp creates the campaign, resolves the audience, paces sends to your number's Meta messaging tier, and tracks delivery through to read receipts.
 
 <Note>
-Each delivered recipient send comes out of the wallet. LazyApp adds 20% on Meta's published rate. On a partner-managed account the wallet pays that total. On a customer-managed account Meta invoices the WhatsApp Business Account and the wallet pays only the 20%. See [Pricing](/billing/overview) and [WhatsApp message rates](/billing/whatsapp-rates).
+Broadcasts in live mode count against your plan's monthly sends: 2,000 on Starter, 15,000 on Growth and 1,00,000 (fair use) on Pro. Test mode is never limited. See [Monthly broadcast sends](#monthly-broadcast-sends) and [Plans and limits](/billing/pricing-and-tiers#feature-gating).
 </Note>
 
 ## Quick start
@@ -231,6 +231,26 @@ curl https://lazyapp.in/v1/contacts/{contact}/consent \
 
 Consent is evidence, not just a flag — `consent_text`, `proof_reference` and `captured_by` are stored exactly as given. Granting marketing consent also lifts a matching suppression, so someone who just opted in on your site is not still opted out.
 
+## Monthly broadcast sends
+
+Your plan sets how many live-mode broadcast recipients you can send to in a calendar month (UTC):
+
+| Plan | Broadcast sends a month |
+| --- | --- |
+| Starter | 2,000 |
+| Growth | 15,000 |
+| Pro | 1,00,000 (fair use) |
+
+Every recipient that is queued or sent counts, across all broadcasts in the workspace. The count resets on the 1st of the month. Test mode is never limited, so you can rehearse a broadcast on the test number as often as you like.
+
+- **Starting checks the whole audience.** If a broadcast has more pending recipients than you have sends left this month, LazyApp refuses to start it, and the message says how many sends remain and when they reset. Send to fewer people or move to a bigger plan in **Billing**. Over the API, the start call returns `422` with that reason in `message`.
+- **A scheduled broadcast that no longer fits fails.** It moves to `failed` with the reason, rather than retrying every minute.
+- **A running broadcast pauses when the month is used up.** Other broadcasts can use sends after this one started, so LazyApp checks again before each batch. When nothing is left, the broadcast moves to `paused` and your billing contacts get an email. Start it again next month, or after you upgrade, from the console or with `POST /v1/broadcasts/{uuid}/start`.
+
+### What a broadcast costs
+
+The send limit is what your plan includes. The messages themselves are billed by Meta, at Meta's rates, to your own Meta payment method. LazyApp adds 0%. See [How Meta bills your messages](/billing/meta-message-billing) and [WhatsApp rates](/billing/whatsapp-rates).
+
 ## Status and webhooks
 
 | Status | Meaning |
@@ -240,7 +260,8 @@ Consent is evidence, not just a flag — `consent_text`, `proof_reference` and `
 | `running` | Sends in progress |
 | `completed` | All recipients processed |
 | `failed` | Stopped with an error (for example template missing) |
-| `paused` / `stopped` | Console-only lifecycle states |
+| `paused` | Paused from the console, or because the month's [broadcast sends](#monthly-broadcast-sends) ran out. Start it again to resume |
+| `stopped` | Stopped from the console |
 
 Webhook events:
 
@@ -274,4 +295,5 @@ reduced.
 - [Templates](/sending/templates) — create and approve marketing templates
 - [Messages](/sending/messages) — one-off template sends with per-recipient control
 - [Webhooks](/webhooks/events#campaigns) — `campaign.*` events
-- [Pricing](/billing/overview) — wallet and usage
+- [Plans and limits](/billing/pricing-and-tiers#feature-gating) — monthly broadcast sends per plan
+- [How Meta bills your messages](/billing/meta-message-billing) — Meta's rates, 0% added by LazyApp

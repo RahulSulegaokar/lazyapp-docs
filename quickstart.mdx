@@ -24,7 +24,7 @@ All API requests require an API key as a Bearer token. There is no official SDK 
 3. Click **Create API key**
 4. Copy the key immediately — you won't be able to see it again
 
-Use a `sk_test_` key while you build. Test keys never reach a real phone.
+Use a `sk_test_` key while you build. Test keys never reach a real phone, and they are free: test mode is never plan-limited. A `sk_live_` key needs the Pro plan and returns `402` `plan_limit_reached` without it. See [Plans and limits](/billing/pricing-and-tiers).
 
 ### Set up the client
 
@@ -92,7 +92,7 @@ IDs in this API are UUIDs (like `9f8b1c2d-4e5f-4a6b-8c7d-0e1f2a3b4c5d`). Each st
 
 ## Step 1: Confirm a connection
 
-You need at least one WhatsApp connection on the workspace. Connect a number in the console, or claim a LazyApp sandbox number in test mode.
+You need at least one WhatsApp connection on the workspace. Claim the free LazyApp sandbox number in test mode, or connect your own number in the console (that needs a plan).
 
 Then list what you have:
 

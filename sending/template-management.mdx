@@ -29,7 +29,7 @@ WhatsApp limits how many marketing messages one person receives from all busines
 Meta checks every template's category. If it decides a utility template is really marketing, it schedules a change:
 
 1. You get a `template.category_changed` webhook, and the template shows `pending_category` with the new category and the date it applies.
-2. On that date the category changes, along with the price per message.
+2. On that date the category changes, along with Meta's price per message. Meta bills that price to your own Meta payment method; LazyApp adds 0%. See [How Meta bills your messages](/billing/meta-message-billing).
 
 LazyApp shows the upcoming change on the template, and removes a [delivery time limit](/sending/template-formats#delivery-time-limit) that the new category would not allow. To avoid the change, edit the wording so it clearly relates to a transaction the contact made.
 

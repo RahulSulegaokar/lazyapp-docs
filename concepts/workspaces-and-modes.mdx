@@ -19,13 +19,17 @@ Each workspace has two independent modes:
     delivery statuses, so you can exercise the full lifecycle safely.
   </Card>
   <Card title="live" icon="tower-broadcast">
-    Real messages, real recipients, real cost.
+    Real messages, real recipients. Meta bills each message to the business at its own rates.
   </Card>
 </CardGroup>
 
 Mode is a property of the key, taken from its prefix (`sk_test_` / `sk_live_`). The two modes hold entirely separate data: a contact created in test does not exist in live.
 
 This means promoting an integration is a credential swap, not a code change.
+
+### Modes and plans
+
+Test mode is free and never plan-limited: it runs on the shared test number, so you can build without a plan. Live mode is where the plan applies. Connecting your own number needs a plan, and live API keys need the Pro plan; a live key on a smaller plan gets `402` `plan_limit_reached`. Meta bills each live message to the business directly, and LazyApp adds 0% to Meta's rates. See [How billing works](/billing/overview) and [Plans and limits](/billing/pricing-and-tiers).
 
 <Note>
   In the console, mode is a toggle in the header rather than part of the URL, so a link

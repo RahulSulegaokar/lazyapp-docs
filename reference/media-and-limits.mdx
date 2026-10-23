@@ -100,7 +100,7 @@ When Meta rejects a send, the message row and `message.failed` webhook carry Met
 | **190**, **0**, **3** | Access token invalid or expired | Reconnect the WABA |
 | **131037** | Display name not approved | Fix verified name in WhatsApp Manager |
 
-LazyApp may return **`402`** when the wallet is empty — that is billing, not Meta.
+LazyApp returns **`402`** with `code: plan_limit_reached` for a live key on a plan below Pro, and `422` when a broadcast would go past the month's live broadcast sends. That is your LazyApp plan, not Meta. See [Plans and limits](/billing/pricing-and-tiers#plan-limit-reached).
 
 <Warning>
   Do not copy error-code meanings from other BSP docs blindly. Meta assigns codes precisely — **131026** is undeliverable recipient in LazyApp, while **131047** is the re-engagement / closed-window case. Check the failed message in the console or `message.failed` webhook payload for the exact code.

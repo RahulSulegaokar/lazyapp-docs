@@ -1,53 +1,65 @@
 ---
 title: "How billing works"
-description: "When the wallet is debited, when service charges wait for Meta, and how platform customers pay."
+description: "Starting a plan, upgrades, downgrades, cancelling, invoices, and how LazyApp records Meta's message charges."
 ---
 
+Your plan is a Stripe subscription. Stripe holds your card, charges each renewal, retries failed payments and issues the invoices. LazyApp mirrors what Stripe reports, so **Settings → Billing** always shows the state Stripe has.
+
+## Start a plan
+
+1. Open **Settings → Billing** and choose Starter, Growth or Pro, monthly or yearly, with any add-ons.
+2. Pay by card on Stripe Checkout. Plans are charged in INR.
+3. The plan starts as soon as payment completes. Back in **Billing**, the page updates once Stripe confirms.
+
+Your first plan payment is refundable in full if you ask within 7 days.
+
+## Change a plan
+
+**Billing** shows the exact amount for a change before you confirm it.
+
+| Change | When it applies | What you pay |
+| --- | --- | --- |
+| Upgrade: a bigger plan, more add-ons, or monthly to yearly | Now | The prorated difference, charged straight away |
+| Downgrade: a smaller plan, fewer add-ons, or yearly to monthly | At the end of the current period | The new price from the next renewal |
+| Cancel | At the end of the current period | Nothing more |
+
+Upgrades apply now because you want the extra room now. If your card is declined, nothing changes: you stay on your current plan and are not charged.
+
+Downgrades and cancellations wait for the period end because you have already paid for it. Until then you keep everything you paid for, and you can undo the downgrade or cancellation from **Billing**.
+
+A downgrade has to fit what you use today. If you have more numbers connected or more members (counting pending invitations) than the smaller plan allows, LazyApp refuses the change and says what to remove first:
+
 ```text
-partner-managed →  usage row, then wallet debit of total_charge
-customer-managed → usage row with meta_rate, total_charge = 20% of that rate
-empty wallet → HTTP 402
+You have 3 WhatsApp numbers connected, but Growth with these extras allows 1. Disconnect a number or add extra numbers first.
 ```
 
-## What charges the card
+Features work differently. You can move to a plan without automations while you still have automations, for example. They stay in your workspace to open, pause, archive or delete, but you cannot create or change them in Live until you upgrade again. See [Feature gating](/billing/pricing-and-tiers#feature-gating).
 
-| Action | What happens |
-| --- | --- |
-| Wallet top-up (₹999 / ₹2,500 / ₹5,000 / ₹10,000) | Checkout. On `payment.succeeded` the wallet is credited the same amount and a receipt is stored |
+## When a plan ends
 
-There is no monthly subscription and no welcome credit. A new billing account starts with an empty wallet. Managed customer workspaces are not credited separately.
+After a cancellation takes effect, or when Stripe gives up on a failed payment, the workspace has no plan:
 
-## When a message is debited
-
-1. LazyApp resolves the Meta rate for the category and recipient region.
-2. `customer_managed` stores that rate and sets `total_charge` to 20% of it. Meta invoices the published rate.
-3. `partner_managed` sets `total_charge` to the Meta rate plus 20%, then FX and the external fee when they apply.
-4. Templates and other non-service sends debit immediately when the wallet is prepaid-active.
-5. Live service sends stay `settlement_status` `pending` with a zero total until Meta reports `pricing.billable`. `false` waives the row (`free_reason` `meta_service_allowance`). `true` quotes and debits once.
-6. Test mode charges service immediately, at the Meta rate plus 20% when the account is partner-managed, and at 20% of the Meta rate when it is customer-managed. The Meta service allowance and the in-window free rule do not apply.
-
-Failed deliveries stay free unless failed-message charging is enabled. Utility inside the 24-hour window is charged unless that free rule is enabled.
-
-Re-recording the same message does not debit again after the wallet was charged, the row is pending, or the row was waived.
-
-## Platform customers
-
-| Mode | Wallet |
-| --- | --- |
-| `inherit` | Debits the platform team's wallet for `total_charge` |
-| `prepaid` | Debits that customer's wallet |
-| `postpaid` | Records the row and debits neither wallet |
-
-Markup stays on the retail figure you invoice. LazyApp does not collect it.
-
-The public wallet has no message cap, media storage cap, or monthly integration-call cap. Those checks run only when a limit is set on the paying account: the platform parent when the workspace is a platform customer.
-
-## Pauses
-
-Partner-managed templates and other non-service sends pause when the prepaid wallet is at or below zero (`insufficient_credits`). Service pauses with `service_credits_exhausted` only after a settled, non-free service charge exists and the balance is at or below zero. When a message cap is configured, that cap pauses with `plan_message_allowance_exhausted` even when the wallet still has funds.
-
-An empty wallet does not, by itself, block every workspace action. The send path checks the precise pause.
+- Sending from your own number, automations and other plan features pause.
+- Nothing is deleted. Your contacts, conversations, templates and settings stay.
+- **Billing** shows **Choose a plan**. Pick one and everything works again.
+- Test mode keeps working, as it does without a plan.
 
 ## Invoices
 
-Successful provider payments create a numbered receipt (`LA-YYYY-#####`). Open **Invoices** for the current period and the receipt list. The workspace owner, and a billing email when it differs, receive that receipt. A failed payment and a cancelled subscription each send one email. A wallet that is empty, or at or below the low-balance alert, emails once per day. The console **Billing** page stores who you bill as, the legal name, billing email, address, optional GSTIN, and a spending limit. Message charges are taken from the wallet during the month. Tax is not added.
+Stripe's invoice is the invoice of record. Each plan payment gets one, with a hosted page and a PDF. Stripe also emails a receipt for each successful payment.
+
+- Open **Manage billing** in **Settings → Billing** to reach the Stripe Customer Portal, where you can download every invoice, change your card and cancel.
+- Your billing details in **Settings → Billing** (legal name, billing email, address and optional GSTIN) are printed on your invoices.
+- Billing emails go to the workspace owner, and to your billing email when it differs.
+
+## Messages are not on your LazyApp invoice
+
+Meta bills your messages directly, to the payment method on your WhatsApp Business Account, at Meta's rates. LazyApp adds 0%. Nothing about messages appears on your LazyApp invoice.
+
+LazyApp still records every charged message on the usage ledger: its category, the contact's region, Meta's rate and whether Meta counted it as free. That record is for you to reconcile against Meta's invoice. **Usage** in the console shows it by number and category. See [Meta message billing](/billing/meta-message-billing).
+
+## Related
+
+- [Plans and limits](/billing/pricing-and-tiers)
+- [Payment issues](/billing/payment-issues)
+- [Meta message billing](/billing/meta-message-billing)

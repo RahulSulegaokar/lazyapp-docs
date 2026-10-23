@@ -27,7 +27,7 @@ There is no Zernio-style `POST /v1/whatsapp/sandbox/sessions`, no reply-to-verif
 | Activation model | Add a test recipient in the console (no WhatsApp reply gate) |
 | Send API | Standard [`POST /v1/messages`](/sending/messages) with an `sk_test_` key |
 | Templates in test | Your workspace templates in test mode — no locked sandbox template |
-| Billing | Test-mode sends are not production traffic; see [Billing](/billing/overview) |
+| Billing | Free. Test mode and the shared test number are never plan-limited and need no plan; see [Plans and limits](/billing/pricing-and-tiers) |
 
 <Callout type="info">
   To send to many recipients, sync production templates, or run live traffic, connect your own number via [Embedded Signup](/guides/connecting-whatsapp) and promote to live mode — see [Phone numbers](/guides/phone-numbers).
@@ -67,7 +67,7 @@ There is no public API for claim or release. Platform customers follow the same 
 
 ### Option B — Connect your own WABA
 
-Run [Embedded Signup](/guides/connecting-whatsapp) while the console is in test mode if you want your own WABA credentials in the test partition. Most teams claim the pool number first, then connect their real number when promoting to live.
+Run [Embedded Signup](/guides/connecting-whatsapp) while the console is in test mode if you want your own WABA credentials in the test partition. Connecting your own number needs a plan, even in test mode; the claimed sandbox number does not. Most teams claim the pool number first, then connect their real number when promoting to live.
 
 List connections (including a claimed sandbox) with capabilities:
 
@@ -155,11 +155,12 @@ OTP fraud limits still apply — resend delay, per-IP recipient fan-out, and dai
 
 When the integration behaves correctly in test mode:
 
-1. Switch the console to **Live** mode.
-2. Connect your production WhatsApp number via [Embedded Signup](/guides/connecting-whatsapp) (or use an existing live connection).
-3. Create an `sk_live_` key with the scopes you need.
-4. Point webhooks at your production URL (live endpoints are separate from test).
-5. Swap the API key in your app — no URL or payload changes required.
+1. Choose a plan in **Billing**. Your own number needs a plan, and `sk_live_` keys need **Pro**; below Pro a live key gets `402` `plan_limit_reached`. See [Plans and limits](/billing/pricing-and-tiers).
+2. Switch the console to **Live** mode.
+3. Connect your production WhatsApp number via [Embedded Signup](/guides/connecting-whatsapp) (or use an existing live connection).
+4. Create an `sk_live_` key with the scopes you need.
+5. Point webhooks at your production URL (live endpoints are separate from test).
+6. Swap the API key in your app — no URL or payload changes required.
 
 Templates, contacts, and message history do **not** copy from test to live. Re-create or re-sync what production needs.
 

@@ -266,7 +266,7 @@ Flows: use LazyApp's [Flows guide](/guides/flows) under `/v1/flows` (create, pub
 | Calling | WebRTC / calls | [Calling](/concepts/capabilities) when Meta grants it |
 | Usage for tenants | Platform | [Tenant usage](/platform/usage) |
 
-**You also gain:** cursor pagination, `Idempotency-Key` on all writes, events that decouple code from template names, wallet usage ledger, and a WhatsApp-only focus (no Instagram/X inbox).
+**You also gain:** cursor pagination, `Idempotency-Key` on all writes, events that decouple code from template names, flat monthly plans with 0% added to Meta's message rates, and a WhatsApp-only focus (no Instagram/X inbox).
 
 **No LazyApp equivalent (plan around these):**
 
@@ -290,7 +290,7 @@ Migrate **number by number**. Webhook routing and registration move with the num
 | **Rollout** | Remaining numbers / customers in batches |
 | **Cutoff** | Cancel Kapso; keep your history export |
 
-Meta's conversation charges and template approvals live on the WABA — they are not “re-approved” by LazyApp when you reconnect the same number.
+Meta's message billing and template approvals live on the WABA — they are not “re-approved” by LazyApp when you reconnect the same number. Meta keeps billing messages to the business's own payment method at its own rates; LazyApp adds 0% and charges only its flat [plan](/billing/pricing-and-tiers). Live API keys need the Pro plan, so pick it before the pilot phase.
 
 ---
 

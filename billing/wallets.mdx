@@ -1,0 +1,77 @@
+---
+title: "Wallets"
+description: "Wallets exist only for resellers and platform teams: what they pay for, adding money, automatic top-up and receipts."
+---
+
+Most workspaces have no wallet. A plan is paid by card through Stripe, and Meta bills messages directly to the business, so there is nothing for a wallet to pay. See [Pricing](/billing/overview).
+
+A wallet exists only where money still moves through LazyApp:
+
+| Who | What the wallet pays for |
+| --- | --- |
+| A reseller | LazyApp's plan price for each client workspace, every month |
+| A platform team | ₹999 a month for each connected customer number, plus Meta's charges for numbers LazyApp pays Meta for |
+
+No wallet pays a LazyApp fee per message. Wallets are in INR.
+
+A workspace that had money in its wallet before plans still sees that balance in **Settings → Billing**, labelled as money left from before plans.
+
+## Resellers
+
+A reseller pays LazyApp's plan price for each client workspace from their own wallet, and bills their clients whatever they like, outside LazyApp. Client workspaces have no wallet and never pay LazyApp by card.
+
+- The wallet lives on the reseller home, with **Add money** and how many days the balance lasts at your current clients.
+- Each client's plan is debited from the wallet when it starts and at each monthly renewal.
+- If the wallet is short at renewal, the client's plan keeps working for a 3-day grace period. You and the client are both told. If you have not added money by then, the client's plan features pause.
+
+See [Resellers](/platform/resellers) for setup, client prices and earnings.
+
+## Platform teams
+
+A platform team is on the Platform plan: every feature, no caps. It pays ₹999 a month for each connected customer number, debited from its wallet. Managed customer workspaces use the platform team's plan. The wallet shows as low when it holds less than one month of that cost.
+
+Platform customers' messages are billed by Meta to each business, at Meta's rates, with no markup. The only exception is a number LazyApp pays Meta for, through partner-managed funding. Then LazyApp debits Meta's rate from a wallet: the platform team's, or the customer's own when that customer is prepaid. When the WhatsApp account is not billed in USD, 5% is added for currency conversion, and messages not sent through LazyApp add a further 5%.
+
+See [Platform overview](/platform/overview) and [Platform funding](/platform/funding).
+
+## Add money
+
+Open **Settings → Billing** (or **Add money** on the reseller home) and choose an amount:
+
+| Pack | Wallet credit |
+| --- | --- |
+| ₹999 | ₹999 |
+| ₹2,500 | ₹2,500 |
+| ₹5,000 | ₹5,000 |
+| ₹10,000 | ₹10,000 |
+
+You can also type your own amount, from ₹100 to ₹1,00,000. You pay by card on Stripe Checkout, and the wallet is credited the same amount once the payment succeeds.
+
+## Automatic top-up
+
+A wallet that runs dry stops paying for client plans or customer numbers, so you can let LazyApp top it up from a saved card. Open **Settings → Billing → Automatic top-up**.
+
+1. **Save a card.** You go to Stripe's secure page once. LazyApp never sees the card number, only the brand and last four digits.
+2. **Choose when and how much.** For example, add ₹2,500 when the balance falls below ₹500.
+3. **Turn it on.**
+
+When a debit leaves the balance below your threshold, LazyApp charges the saved card for your amount in the background and credits the wallet, with a receipt, the same way as adding money by hand.
+
+- **One top-up at a time.** Several debits crossing the threshold together cause one charge, not many.
+- **Bank approval.** If your bank asks you to approve the charge (3-D Secure) or refuses it, LazyApp does not retry silently. Your billing contacts get an email asking them to add money by hand, and the next automatic attempt waits a day.
+- **Removing the card** turns automatic top-up off.
+
+Reseller clients do not see this option, because their workspaces have no wallet. There is no API for automatic top-up.
+
+## Receipts
+
+Every top-up gets a numbered receipt under **Settings → Billing → Invoices**. Open one and click **Download PDF** for a copy to file or forward to your accountant. The receipt shows who was billed (with your GSTIN when you added one), what was paid for, any tax, and the total.
+
+Plan payments are different: Stripe's invoice is their invoice of record. See [How billing works](/billing/mechanics#invoices).
+
+## Related
+
+- [Pricing](/billing/overview)
+- [Resellers](/platform/resellers)
+- [Platform overview](/platform/overview)
+- [Platform funding](/platform/funding)

@@ -1,0 +1,93 @@
+---
+title: "Resellers"
+description: "Sell LazyApp under your own brand: your wallet pays each client's plan, you set the price your clients see, and you bill them yourself."
+---
+
+A reseller puts their own brand on LazyApp and signs up businesses as clients. Your clients use the full LazyApp console at your address, with your name and logo. You pay LazyApp's plan price for each client from your wallet, and you charge clients whatever you like, outside LazyApp.
+
+You don't write any code to resell. If you're building WhatsApp into your own product through the API, you want a [platform team](/platform/overview) instead.
+
+## How resellers differ from platform teams
+
+| | Reseller | Platform team |
+| --- | --- | --- |
+| Your clients use | The LazyApp console, under your brand and address | Your own product, which calls `/v1/platform/*` |
+| You pay LazyApp | Each client's plan price, every month, from your wallet | ₹999 a month per connected customer number, from your platform wallet |
+| Your clients get | The plan they pick in **Billing**: Starter, Growth or Pro | Every feature, no caps (they inherit your Platform plan) |
+| You earn | The price you charge minus LazyApp's plan price | Whatever you charge for your product |
+
+In both cases, Meta bills each business directly for its WhatsApp messages, at Meta's rates. LazyApp adds 0%, and neither model has a per-message markup. See [Meta message billing](/billing/meta-message-billing).
+
+## How the money works
+
+Each client workspace is on a LazyApp plan, and your wallet pays for it:
+
+1. A client picks a plan in **Billing** on your address. They see the monthly price you set for that plan.
+2. LazyApp debits that plan's monthly price from your wallet, and the plan starts. The client never enters a card with LazyApp.
+3. Every month, the plan renews from your wallet in the same way.
+4. You bill the client your price, outside LazyApp — your invoice, your payment terms.
+
+Your earnings for each client are your price minus LazyApp's plan price, per month. Say you charge a client ₹999 a month for Starter: LazyApp debits ₹499 from your wallet, and you keep ₹500. Plan prices are on [Plans and limits](/billing/pricing-and-tiers).
+
+There are no payouts from LazyApp, and you cannot move credit into a client's workspace. What you earn is the difference between what you collect and what your wallet pays. Client workspaces have no wallet, because there is nothing for one to pay: you pay their plan, and Meta bills their messages.
+
+Messages are billed separately, by Meta. Each client connects their own WhatsApp number and adds their own Meta payment method, and Meta charges them directly. Nothing about messaging touches your wallet.
+
+## Become a reseller
+
+<Steps>
+  <Step title="Apply">
+    Go to `/start` and request to resell. If you're not signed in, you're asked to log in or create an account first. LazyApp reviews the request and approves it.
+  </Step>
+  <Step title="Set up your brand">
+    Once you're approved, setup opens with three steps:
+
+    1. **Brand** — your name, logo and support email. Clients see these in the console and in the email they receive; replies go to your support email.
+    2. **Address** — your free address, `{slug}.lazyapp.in`, works straight away. A custom domain is optional, and you can add it later.
+    3. **Prices** — the monthly price clients see for each plan. Leave a plan empty to show no price. You can change prices later.
+  </Step>
+  <Step title="Add money">
+    Your wallet must cover a plan before a client can start it. Click **Add money** on your reseller home and pay by card. The money is added once the payment completes. See [Wallets](/billing/wallets).
+  </Step>
+  <Step title="Invite clients">
+    Send clients to your address to sign up, or add them from **Clients**. Each client gets their own workspace on your brand.
+  </Step>
+</Steps>
+
+## Your reseller home
+
+Your reseller home is at `/reseller`. Switch between it and your own workspace from the header.
+
+| Page | What it shows |
+| --- | --- |
+| **Overview** | Your clients with their plan, status and next renewal; your wallet balance and how many days it lasts at your current clients' plans; **Add money**; this month's earnings |
+| **Clients** | Every business on your brand. Open a client's workspace to help them, then click **Back to Reseller** to return |
+| **Earnings** | Your price minus LazyApp's plan, per client per month |
+| **Settings** | **Brand**, **Prices** and **Domain** |
+
+## When your wallet runs short
+
+Your wallet pays one client month at a time, so keep at least a month of your clients' plans in it. Overview shows how many days the balance lasts, and LazyApp emails you when what's left will not cover a month.
+
+If the wallet is short when a client picks a plan, the plan does not start. The client is told that you need to add money before the plan can start, and LazyApp emails you to add money. Once you do, they can start it straight away.
+
+If the wallet is short at a renewal, the client's plan keeps working for a **3-day grace period**:
+
+- The client sees a notice in **Billing** that their provider needs to add money, with the date the grace period ends, and receives an email.
+- You receive an email asking you to add money for that client, and Overview lists the clients your wallet did not cover.
+- If you add money in time, the plan renews. If not, the plan ends when the grace period is over: sending from the client's own number and the other plan features pause. Nothing is deleted. To restore it, add money and have the client choose the plan again in **Billing**.
+
+LazyApp checks renewals every hour, so a plan renews soon after money arrives.
+
+## What clients see
+
+On your address, clients see your brand — your name, logo and support email — and not LazyApp's marketing site. They sign in, connect their WhatsApp number, and pick a plan in **Billing**, which shows your price for each plan and says that you pay for the plan and bill them directly.
+
+Everything else works as it does for any LazyApp workspace, within the client's plan. See [Plans and limits](/billing/pricing-and-tiers#feature-gating) for what each plan includes.
+
+## Related
+
+- [Build a platform](/platform/overview) — the API model for building WhatsApp into your own product
+- [Plans and limits](/billing/pricing-and-tiers) — plan prices and what each includes
+- [Wallets](/billing/wallets) — adding money to a reseller or platform wallet
+- [Meta message billing](/billing/meta-message-billing) — how Meta charges for messages

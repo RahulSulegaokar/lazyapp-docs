@@ -65,12 +65,12 @@
             "group": "Billing",
             "pages": [
               "billing/overview",
-              "billing/whatsapp-rates",
               "billing/pricing-and-tiers",
-              "billing/auto-recharge",
-              "billing/mechanics",
               "billing/meta-message-billing",
-              "billing/payment-issues"
+              "billing/whatsapp-rates",
+              "billing/mechanics",
+              "billing/payment-issues",
+              "billing/wallets"
             ]
           },
           {
@@ -107,6 +107,7 @@
             "group": "Platforms",
             "pages": [
               "platform/overview",
+              "platform/resellers",
               "platform/messaging",
               "platform/usage",
               "platform/funding",
@@ -141,6 +142,12 @@
       }
     ]
   },
+  "redirects": [
+    {
+      "source": "/billing/auto-recharge",
+      "destination": "/billing/wallets"
+    }
+  ],
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"

@@ -1,110 +1,109 @@
 ---
-title: "Pricing details"
-description: "Volume tiers, re-pricing when Meta applies another category, authentication-international rates, and your WhatsApp billing currency."
+title: "Plans and limits"
+description: "Starter, Growth and Pro: prices, add-ons, yearly billing, GST, what each plan includes, and the 402 you get when you reach a limit."
 ---
 
-WhatsApp charges per delivered message, by [category](/billing/whatsapp-rates#categories) and the contact's country. This page covers the details that change the price of a single message, and how LazyApp follows them so your wallet matches what WhatsApp billed.
+Every plan is a flat price that pays LazyApp. Messages are billed separately by Meta, at Meta's rates, and LazyApp adds 0% to them. See [Pricing](/billing/overview) for how the two bills fit together.
 
-## What Meta reports for each message
+## Plans
 
-Every status update from WhatsApp carries a `pricing` object: whether the message is billable, and the `category` Meta charged. LazyApp quotes a send when it goes out, then corrects the quote from that report:
+| Plan | Monthly | Yearly | WhatsApp numbers | Members | Broadcast sends a month |
+| --- | --- | --- | --- | --- | --- |
+| Starter | ₹499 | ₹4,990 | 1 | 2 | 2,000 |
+| Growth | ₹1,499 | ₹14,990 | 1 | 5 | 15,000 |
+| Pro | ₹3,999 | ₹39,990 | 3 | 15 | 1,00,000 (fair use) |
 
-| Meta's `pricing.category` | What LazyApp does |
-| --- | --- |
-| Same as the quote | Nothing. The charge stands |
-| Another category, e.g. a template Meta re-categorised from utility to marketing | Re-prices the send at Meta's category and charges or refunds the difference in the wallet. The usage row keeps both categories |
-| `authentication_international` | Re-prices at the authentication-international rate, once that rate is loaded |
-| `marketing_lite` | Billed as marketing (Marketing Messages API) |
-| `referral_conversion` | Free. Never re-priced |
-| `general_purpose_ai` | Re-prices at the AI-provider rate, once that rate is loaded |
+- **Starter** gives a small team one number with the inbox, templates, contacts, quick replies and QR links.
+- **Growth** adds automations, WhatsApp Flows, payments and your catalog.
+- **Pro** adds more numbers, a bigger team, the API with live keys, and webhooks.
 
-When LazyApp has no rate for Meta's category, it keeps the original charge and logs it, so a send is never left unpriced.
+Prices are in rupees. Plans are always billed in INR.
 
-Brand customers and platform customers see the re-priced amount with their own markup. Their spending limit counts what they actually paid.
+### Add-ons
 
-## Volume tiers
+Buy more room on any plan without moving up a plan:
 
-Utility and authentication messages get cheaper as you send more in a month. Meta counts messages per market and category, and only charged messages count. Message number N pays the rate of the tier that contains N, so once you cross a tier, every later message that month pays the lower rate.
-
-LazyApp counts per workspace, the same way. The tier is on each usage row (`volume_tier`), and **Usage** in the console tells you when you reach a new tier. Marketing and service messages have no tiers.
-
-```bash
-curl "https://lazyapp.in/v1/pricing/tiers?category=utility&region=IN" \
-  -H "Authorization: Bearer $LAZYAPP_API_KEY"
-```
-
-**Scope:** `billing:read`
-
-```json
-{
-  "data": [
-    { "category": "utility", "region": "IN", "currency": "USD", "tier": "1:100000", "meta_rate": "0.001100" }
-  ]
-}
-```
-
-`tier` is the first and last message of the tier for the month (`MAX` for the top tier). `meta_rate` is Meta's rate in the tier, before LazyApp's margin.
-
-## Authentication-international rates
-
-Businesses in some countries, India among them, pay a higher authentication rate for one-time passcodes sent to contacts in other countries. Meta tells LazyApp when your WhatsApp account becomes eligible and from when. **Usage** shows it, and so does `GET /v1/pricing/account`.
-
-## Pricing facts for your account
-
-```bash
-curl "https://lazyapp.in/v1/pricing/account?phone_number_id=106540352242922&refresh=true" \
-  -H "Authorization: Bearer $LAZYAPP_API_KEY"
-```
-
-**Scope:** `billing:read`. Without `refresh=true`, LazyApp answers from what Meta last sent it, without calling Meta.
-
-```json
-{
-  "currency": "INR",
-  "primary_business_location": "IN",
-  "auth_international": {
-    "kind": "auth_international",
-    "country": "IN",
-    "starts_at": "2026-11-01T00:00:00+00:00"
-  },
-  "volume_tiers": [
-    { "kind": "volume_tier", "pricing_category": "utility", "region": "IN", "tier": "100001:1000000", "effective_month": "2026-10" }
-  ],
-  "waba_id": "102290129340398"
-}
-```
-
-`volume_tiers` lists the tiers Meta reported for this month.
-
-## Changing your WhatsApp billing currency
-
-This applies only when **you** pay WhatsApp directly (a customer-managed account). When LazyApp pays WhatsApp for the number, your wallet stays in INR and there is nothing to change.
-
-Meta changes the currency by copying your WhatsApp account into a new one in the new currency. Templates are copied, then the numbers move. In the console, open **Phone numbers → your number → Advanced → Billing currency**. Over the API:
-
-| Call | Scope | Does |
+| Add-on | Monthly | Yearly |
 | --- | --- | --- |
-| `POST /v1/connections/{connection}/currency-migration` | `billing:write` | Starts the change. Pass `currency` (e.g. `USD`, `INR`, `EUR`) and, on a Meta credit line, `extended_credit_id`. Answers `202` |
-| `GET /v1/connections/{connection}/currency-migration` | `billing:read` | The current `status`, from Meta |
-| `POST /v1/connections/{connection}/currency-migration/complete` | `billing:write` | Finishes once the status is `READY_TO_COMPLETE`. LazyApp then moves the numbers to the new account |
+| Extra member | ₹299 each | ₹2,990 each |
+| Extra WhatsApp number | ₹999 each | ₹9,990 each |
+
+Add-ons sit on the same subscription as your plan, so they renew on the same date and at the same interval.
+
+### Yearly billing
+
+A yearly plan costs ten months' price: two months free. Add-ons on a yearly plan are yearly too.
+
+### GST
+
+18% GST is added to plan and add-on prices once LazyApp's GSTIN is registered. Until then no tax is added. The console shows "+ 18% GST" next to prices only when it applies, so the price you see is the price you pay. Add your own GSTIN in **Settings → Billing** to have it printed on your invoices.
+
+### No free plan
+
+There is no free plan. The shared test number is free in test mode, with every feature on, so you can build and test your integration before you pay. Connecting your own WhatsApp number needs a plan.
+
+### Refund
+
+Your first plan payment is refundable in full if you ask within 7 days. The **Billing** page shows this while your next plan payment would be your first.
+
+### Payment
+
+You pay by card through Stripe. Choosing a plan opens Stripe Checkout. After that, **Manage billing** opens the Stripe Customer Portal, where you change your card, download invoices and cancel. Stripe's invoice, with its hosted page and PDF, is your invoice of record. See [How billing works](/billing/mechanics).
+
+## Feature gating
+
+LazyApp enforces plans on the server, so the same limits apply in the console and through the API.
+
+| | Starter | Growth | Pro |
+| --- | --- | --- | --- |
+| Inbox, templates, contacts, quick replies, QR links | Yes | Yes | Yes |
+| Automations | No | Yes | Yes |
+| WhatsApp Flows | No | Yes | Yes |
+| Payments | No | Yes | Yes |
+| Catalog | No | Yes | Yes |
+| API with live keys | No | No | Yes |
+| Webhooks | No | No | Yes |
+| Your own WhatsApp numbers | 1 | 1 | 3 |
+| Members | 2 | 5 | 15 |
+| Live broadcast sends a month | 2,000 | 15,000 | 1,00,000 |
+
+How each limit is counted:
+
+- **Numbers** count your own connected WhatsApp numbers. The shared test number does not count.
+- **Members** count people in the workspace plus invitations still waiting for an answer. An invitation holds a seat until it is accepted or expires.
+- **Broadcast sends** count Live broadcast recipients queued or sent in the calendar month (UTC). The count resets on the 1st. LazyApp checks the count when you start a broadcast and refuses one that would go past it. A broadcast that is already running **pauses** when the month's sends are used up, and the workspace owner is told. Messages you send one at a time, replies and automations do not count.
+- **Features** are checked when you create or change something. Opening, pausing, archiving and deleting stay open, so after a downgrade you can still see and tidy up what you built on a bigger plan.
+
+### Test mode is never limited
+
+Test mode uses the shared test number, and nothing in it is limited. Test API keys work on every plan, including with no plan at all. Build against test mode first, then choose the plan that fits what you need in Live.
+
+### In the console
+
+When you reach a limit in the console, LazyApp shows a message that says what to change, with an **Upgrade** or **Buy add-on** button that opens **Billing**.
+
+## Plan limit reached
+
+Through the API, a live key on a plan without the API returns HTTP `402` with the code `plan_limit_reached`. The body uses the standard [error shape](/concepts/errors): a `message` written for a person and a stable `code` to branch on.
+
+That is a live key on a workspace below Pro. Every request with that key is refused:
 
 ```json
 {
-  "migration": {
-    "migration_id": "1234567890",
-    "status": "READY_TO_COMPLETE",
-    "currency": "USD",
-    "destination_waba": { "id": "109876543210", "currency": "USD" }
-  }
+  "message": "The API is on the Pro plan. Upgrade in Billing to use live keys. Test keys keep working.",
+  "code": "plan_limit_reached"
 }
 ```
 
-## Conversation-based pricing
+Other limits are refused with `422` and a plain `message` that names the limit, not with `plan_limit_reached`: a broadcast with more recipients than the month's sends left, or connecting a number past your plan's numbers. On Pro you can still reach those two.
 
-Before July 2025, WhatsApp charged per 24-hour conversation, not per message. That model has ended, and LazyApp bills per message only.
+Branch on `code`, not on `message`. The message tells a person what to change in **Billing** and can be reworded. `402` with `plan_limit_reached` is not worth retrying: it keeps failing until the plan changes. Show the `message` to the person who can change the plan.
+
+Test keys never get `plan_limit_reached`.
 
 ## Related
 
-- [WhatsApp message rates](/billing/whatsapp-rates)
-- [Auto top-up and receipts](/billing/auto-recharge)
-- [WhatsApp analytics](/guides/whatsapp-analytics)
+- [Pricing](/billing/overview)
+- [How billing works](/billing/mechanics)
+- [Payment issues](/billing/payment-issues)
+- [Errors](/concepts/errors)

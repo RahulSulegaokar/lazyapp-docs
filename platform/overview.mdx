@@ -37,6 +37,10 @@ flowchart LR
 
 Your own workspace stays separate. Create one platform customer per of *their* customers alongside it.
 
+<Note>
+  **Building a product, or reselling LazyApp?** This section is for platform teams: you call `/v1/platform/*` from your own app, and your platform wallet pays ₹999 a month per connected customer number. If you want to put your brand on the LazyApp console and charge businesses your own monthly price, without writing code, see [Resellers](/platform/resellers).
+</Note>
+
 ---
 
 ## Step 1: Create a customer per tenant
@@ -50,9 +54,7 @@ curl https://lazyapp.in/v1/platform/customers \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Acme Retail",
-    "external_id": "acct_8812",
-    "billing_mode": "postpaid",
-    "markup_bps": 1500
+    "external_id": "acct_8812"
   }'
 ```
 
@@ -66,8 +68,6 @@ const response = await fetch('https://lazyapp.in/v1/platform/customers', {
   body: JSON.stringify({
     name: 'Acme Retail',
     external_id: 'acct_8812',
-    billing_mode: 'postpaid',
-    markup_bps: 1500,
   }),
 });
 
@@ -82,15 +82,19 @@ customer = requests.post(
     json={
         "name": "Acme Retail",
         "external_id": "acct_8812",
-        "billing_mode": "postpaid",
-        "markup_bps": 1500,
     },
 ).json()
 # Store customer["id"] — or keep looking them up by external_id
 ```
 </CodeGroup>
 
-`external_id` is your own account id, so you never need a mapping table. Look them up later with `GET /v1/platform/customers?external_id=acct_8812`. You pay LazyApp the usage charge on that customer’s sends. That charge is Meta’s rate plus 20% when the wallet pays the message, and 20% of Meta’s rate when Meta invoices the WhatsApp account. `markup_bps` is a percentage on top of LazyApp’s price, in basis points — 1500 is 15%. On `PATCH /v1/platform/customers/{customer}` you can set `pricing_mode` to `percent` or `category`. In category mode, `category_markups` is rupees added per message type (`marketing`, `utility`, `authentication`, `service`). `platform_fee` is an optional monthly amount in rupees, charged once per calendar month from a prepaid customer wallet. There is no product cap. On inherit billing LazyApp does not collect that markup. On prepaid billing the customer balance is debited the marked-up amount.
+`external_id` is your own account id, so you never need a mapping table. Look them up later with `GET /v1/platform/customers?external_id=acct_8812`.
+
+Creating a customer costs nothing. What you pay LazyApp is ₹999 a month for each customer number that connects, covered in [How platform billing works](#how-platform-billing-works).
+
+<Note>
+  `markup_bps`, `pricing_mode`, `category_markups` and `platform_fee` are no longer stored or returned. LazyApp adds nothing to Meta's rates, so there is no per-customer markup to configure. A request that still sends them succeeds, and the values are ignored.
+</Note>
 
 See [Create a customer](/api-reference/platform/create-a-customer) for all fields.
 
@@ -218,7 +222,7 @@ See [Webhooks](/webhooks/overview) for delivery, retries, and signature verifica
 
 ## Rate limits with many tenants
 
-One platform API key is enough for your whole integration. LazyApp limits **per key** to the plan ceiling (100 requests/minute on Free — see [rate limits](/reference/rate-limits)). Meta separately caps how many unique contacts a number may message in 24 hours; that limit is per connection, reported on [`GET /v1/capabilities`](/concepts/capabilities).
+One platform API key is enough for your whole integration. LazyApp limits requests **per key**, not per customer — see [rate limits](/reference/rate-limits) for the ceiling and the headers that report it. Meta separately caps how many unique contacts a number may message in 24 hours; that limit is per connection, reported on [`GET /v1/capabilities`](/concepts/capabilities).
 
 That budget serves all your tenants together, which has three practical consequences:
 
@@ -226,7 +230,7 @@ That budget serves all your tenants together, which has three practical conseque
 - **Run background work as one smooth queue.** A sync worker with a small concurrency cap uses the budget steadily. Per-tenant cron jobs that all fire at `:00` create bursts.
 - **Fairness between tenants is yours to enforce.** LazyApp limits your key, not your customers — if one tenant triggers a huge burst, queue it so it cannot starve everyone else.
 
-When you get a `429`, back off and retry with the same [Idempotency-Key](/concepts/idempotency). Handle `402` distinctly: spending limit or wallet exhausted for that customer (or your platform billing) — alert, don't retry blindly.
+When you get a `429`, back off and retry with the same [Idempotency-Key](/concepts/idempotency). Handle `402` distinctly. It is a billing state, not a transient error: the customer is suspended, its spending limit is reached, or a wallet that has to pay for the send is empty. Alert someone; retrying will not help.
 
 ---
 
@@ -240,15 +244,36 @@ WhatsApp credentials fail: Meta reviews, quality issues, or a customer reconnect
 
 ---
 
-## Billing modes
+## How platform billing works
+
+A platform team pays LazyApp **₹999 a month for each connected customer number**, debited from your platform wallet. Creating customers and minting keys cost nothing, and so do sends on customer-paid numbers. Add money to the wallet from **Billing** in your platform workspace; see [Wallets](/billing/wallets).
+
+In return your team is on the Platform plan: every feature, including the API, webhooks, automations, Flows, payments and catalog, with no caps on members, numbers or broadcast sends. Each managed customer workspace inherits your plan, so a customer never hits a [plan limit](/billing/pricing-and-tiers#feature-gating) that your team does not. The console marks the wallet low once it holds less than one month of your number cost.
+
+### Who pays Meta
+
+LazyApp adds 0% to Meta's message rates, and platform customers carry no markup. Who pays Meta for a customer's messages is set once per WhatsApp Business Account, by `meta_billing_mode` on the [setup link](/platform/setup-links#options):
+
+| `meta_billing_mode` | Who pays Meta | What your wallet pays per message |
+| --- | --- | --- |
+| `customer_managed` (default) | Meta bills the business directly, on its own Meta payment method | Nothing. `total_charge` is `0` |
+| `partner_managed` | LazyApp pays Meta, using a LazyApp credit line | Meta's rate, plus 5% on a non-USD account and 5% for messages not sent through LazyApp |
+
+Customer-paid numbers are the default because they keep you out of the money flow: Meta invoices your customer, and your wallet only covers the ₹999 per number. See [Meta message billing](/billing/meta-message-billing) for how Meta charges.
+
+### Billing modes
+
+`billing_mode` decides whose wallet takes a charge when there is one — that is, only for messages LazyApp pays Meta for:
 
 | Mode | Meaning |
 | --- | --- |
-| `inherit` | Default. Billable messages debit your platform wallet for `total_charge` (Meta’s rate plus LazyApp’s 20% when the wallet pays the message, or 20% of Meta’s rate when Meta invoices the account). You invoice any markup yourself |
-| `prepaid` | Draws down that customer's wallet for the same charge. Sending stops at zero. Your platform wallet is not debited |
-| `postpaid` | Usage is recorded. Neither wallet is debited. You invoice them |
+| `inherit` | Default. Charges debit your platform wallet |
+| `prepaid` | Charges debit that customer's wallet (`wallet_balance_cents`). Sending is refused with `402` while it is at zero — even on a customer-paid number, so keep those on `inherit` |
+| `postpaid` | Usage is recorded. Neither wallet is debited |
 
-Set `spending_limit_cents` to cap a customer, and `usage_alert_cents` to receive `customer.usage_alert` before they hit it. Read consumption with [`GET /v1/platform/customers/{customer}/usage`](/platform/usage).
+Set `spending_limit_cents` to cap what a customer's sends may cost in a month, and `usage_alert_cents` to receive `customer.usage_alert` before they reach it. Both measure `total_charge`, so on a customer-paid number they never trigger. Read consumption with [`GET /v1/platform/customers/{customer}/usage`](/platform/usage).
+
+You bill your own customers however you like, outside LazyApp.
 
 ---
 
@@ -273,6 +298,8 @@ Rather than rebuilding an inbox, drop LazyApp components into your product with 
 
 - [Tenant messaging](/platform/messaging) — retry-safe sends per customer
 - [Tenant usage](/platform/usage) — per-customer consumption dashboards
+- [Resellers](/platform/resellers) — sell LazyApp under your own brand
+- [Plans and limits](/billing/pricing-and-tiers) — what each plan includes
 - [Tenant inbox](/platform/inbox) — webhook-first conversations
 - [Setup links](/platform/setup-links) — Embedded Signup
 - [Idempotency](/concepts/idempotency) — safe retries

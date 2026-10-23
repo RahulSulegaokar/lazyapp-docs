@@ -1,51 +1,76 @@
 ---
 title: "Meta message billing"
-description: "Choose whether Meta invoices the WhatsApp Business Account or your wallet pays Meta’s rate plus 20%."
+description: "Meta bills your WhatsApp messages directly at its own rates, LazyApp adds 0%, and from 1 October 2026 each number gets 1,000 free service messages a month."
 ---
 
-`meta_billing_mode` is set on the setup link and stored for that WhatsApp Business Account. It does not change later on the same account.
+**Meta bills every WhatsApp message to your business's own Meta payment method, at Meta's rates. LazyApp adds 0%.**
 
-| Mode | Wallet | Meta |
-| --- | --- | --- |
-| `customer_managed` | Records `meta_rate`. `total_charge` is 20% of that rate | Meta invoices the account |
-| `partner_managed` | Debits the published rate plus 20%, then FX and the external fee when they apply | Meta may still invoice the account until a credit line is attached |
+LazyApp is a Meta Tech Provider. When you connect your WhatsApp Business Account, it stays yours, and so does Meta's invoice for it. LazyApp sends your messages but never resells them, so no LazyApp fee is added to a message and no message appears on your LazyApp invoice. Your [plan](/billing/pricing-and-tiers) is what pays LazyApp.
 
-The default is `customer_managed`. If the account already has its own payment method, setup stays customer-managed (`reason` `existing_payment_method`) and sends are not paused.
+## Add a payment method in Meta
 
-A partner-managed account cannot be switched back to customer-managed on the same WhatsApp Business Account.
+Meta needs a payment method on your WhatsApp Business Account to deliver charged messages. Add one in Meta Business Settings, under your WhatsApp Business Account.
 
-## LazyApp’s 20%
+Without one, Meta stops delivering charged messages. Your LazyApp plan does not change that: the plan pays LazyApp, and only Meta can be paid for Meta's messages.
 
-LazyApp adds 20% on Meta's stored USD rate for that category and region.
+## What Meta charges for
 
-- On `partner_managed`, `total_charge` is that total.
-- On `customer_managed`, `total_charge` is only the 20%. Meta invoices the published rate.
-- When `waba_currency` is not `USD`, a 5% FX margin is applied on the partner-managed total.
-- When messages are not processed by LazyApp, a further 5% is applied on the partner-managed total.
-- Tax is not added. The payment fee is recorded and is not part of `total_charge`.
+Meta charges per delivered message, by category (marketing, utility, authentication, service) and the contact's country. Inbound messages are free, and so are reactions. See [WhatsApp message rates](/billing/whatsapp-rates) for the categories and where to find Meta's prices.
 
-## Funding status
+## Service messages from 1 October 2026
 
-`GET /v1/whatsapp/accounts/{wabaId}/funding` (scope `billing:read`) returns the local funding row:
+Service messages are the free-form replies you send inside the 24-hour [customer service window](/concepts/glossary#customer-service-window), after a contact writes to you. Before 1 October 2026, Meta did not charge for them.
 
-```json
-{
-  "waba_id": "1234567890",
-  "status": "not_funded",
-  "reason": "not_attached",
-  "meta_billing_mode": "partner_managed",
-  "paid_messages": { "paused": false, "reasons": [] }
-}
+From 1 October 2026, Meta gives each WhatsApp number **1,000 free service messages a month**. After that:
+
+- Meta charges for each further reply, at its service rate.
+- If your WhatsApp Business Account has no Meta payment method, **replies stop being delivered** until you add one.
+
+This matters most for support-heavy numbers. A number that answers a few dozen contacts a day can pass 1,000 replies well before the month ends, and replies that silently stop reaching contacts are worse than a small charge. Add a payment method before you get close.
+
+### How LazyApp counts free replies
+
+**Usage** in the console shows, for each number:
+
+```text
+Free replies used this month: 640 of 1,000
 ```
 
-Statuses are `funded`, `pending`, `unknown`, `not_funded`, and `revoked`. Until `META_CREDIT_LINE_ID` is set, ensure records `not_attached` and does not call Meta's credit-line API. `funded` is not set automatically.
+- The count is per number, per calendar month, in Live only. Test mode does not count.
+- A reply counts once Meta has classified it, as free inside the 1,000 or as charged. Replies Meta has not reported on yet are left out, so the count can trail your sends by a little.
+- Replies Meta makes free through a free entry point are not counted, because Meta does not take them from the 1,000.
 
-`POST /v1/whatsapp/accounts/{wabaId}/funding` with `business_portfolio_id` (scope `customers:write`) records that status. A new run that is not funded returns `202`. A repeat within 30 seconds reuses the last operation and returns `200`.
+When a number has used all 1,000, **Usage** says so: Meta now charges for replies on that number, and without a payment method on your Meta account, replies stop being delivered.
 
-## Usage
+### Warnings
 
-`GET /v1/whatsapp/accounts/{wabaId}/usage?start_time=...&end_time=...` and the portfolio equivalent return LazyApp's recorded charges for at most 31 days. Amounts are micro-USD (`total_charge` × 1,000,000). `time_basis` is `recorded_at`. `charge_scope` is `lazyapp_recorded_charges`.
+LazyApp checks every hour and tells the workspace owner and your billing email when a number reaches:
 
-## Stop
+- **90%** of its free replies (900 of 1,000), and
+- **100%**, when Meta starts charging.
 
-`POST /v1/whatsapp/portfolios/{portfolioId}/funding/revoke` with an `Idempotency-Key` (scope `customers:write`) returns `202` and sets funding to `revoked`, pauses paid messages, and records `funding_revoked`. This does not call Meta. A later ensure on a revoked account returns `409`.
+Each warning is sent once per number per month. The email links to **Usage**.
+
+Numbers that LazyApp pays Meta for, on a platform team with partner-managed funding, do not get these warnings, because there is no Meta payment method for the business to add.
+
+## Who pays Meta
+
+Every WhatsApp Business Account is in one of two billing modes. The mode is set when the account is connected and does not change later on the same account.
+
+| Mode | Who pays Meta | Available to |
+| --- | --- | --- |
+| `customer_managed` (default) | Your business, on its own Meta payment method | Every workspace |
+| `partner_managed` | LazyApp pays Meta, and debits Meta's rate from a wallet | Platform teams with partner-managed funding |
+
+If the account already has its own payment method in Meta, it stays customer-managed. Platform teams can read and manage funding over the API. See [Platform funding](/platform/funding) and [Wallets](/billing/wallets).
+
+## What LazyApp records
+
+LazyApp records each charged message on the usage ledger, with the category, the contact's region, Meta's rate and whether Meta counted it as free. On a customer-managed account the LazyApp charge on every row is zero, because Meta invoices you directly. Use the ledger to check Meta's invoice. **Usage** in the console shows it by number and category, and [WhatsApp message rates](/billing/whatsapp-rates) covers the pricing API.
+
+## Related
+
+- [Pricing](/billing/overview)
+- [WhatsApp message rates](/billing/whatsapp-rates)
+- [Payment issues](/billing/payment-issues)
+- [Platform funding](/platform/funding)
