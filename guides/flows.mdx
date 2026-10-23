@@ -185,6 +185,17 @@ Leave out `flow_names` to copy every flow (Meta copies up to 100 per request). C
 
 Meta calls a data endpoint for flows that load data while the customer fills them in. That traffic is encrypted with a key pair registered on your number. LazyApp is always the endpoint Meta calls: it keeps the key, decrypts each request and either answers from the Flow JSON (flows without a `data_endpoint_uri`) or forwards plain JSON to your `data_endpoint_uri`, signed with `X-LazyApp-Signature: sha256=…` using the flow's signing secret. Your reply is encrypted back for Meta. Set up the number's key once under **Flows → Secure flow connection**.
 
+### Verify the signature
+
+`POST /v1/flows` returns the flow's `endpoint_secret` (`whfs_…`) when you set a `data_endpoint_uri`, and so does the `PUT` that first adds one. It is shown only then, like a webhook secret, so store it with your endpoint's config. Lost it, or need to rotate? `POST /v1/flows/{flow}/rotate-endpoint-secret` returns a new one; the old one stops verifying at once.
+
+```bash
+curl -X POST https://lazyapp.in/v1/flows/{flow}/rotate-endpoint-secret \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+Check every forwarded request before trusting it: compute HMAC-SHA256 of the raw body with the secret and compare it, in constant time, with the hex after `sha256=` in `X-LazyApp-Signature`.
+
 ### Data endpoint health
 
 Probe it the way Meta does:

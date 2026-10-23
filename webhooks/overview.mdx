@@ -157,6 +157,8 @@ See [Verifying webhooks](/webhooks/verifying) for Node, Python, and PHP examples
 
 If you lost the secret, rotate it with [`POST /v1/webhooks/{webhook}/rotate-secret`](/api-reference/webhooks/rotate-a-webhook-signing-secret) instead of deleting the endpoint.
 
+To change an endpoint's URL, `subscribed_events`, headers, number restrictions or retry policy, use `PATCH /v1/webhooks/{webhook}` with just the fields to change. The secret and any queued retries are kept, which deleting and registering again would lose.
+
 ## Custom headers
 
 Add up to 20 static headers for a shared token or routing hint:

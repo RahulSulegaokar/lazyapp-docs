@@ -85,6 +85,34 @@ curl -X PATCH https://lazyapp.in/v1/conversations/{id} \
 
 **Required scope:** `messages:read`
 
+### Assign, resolve and tag
+
+Hand a conversation to the right person from code: a bot that triages a refund request can assign it, mark it pending and tag it in one call.
+
+```bash
+curl -X PATCH https://lazyapp.in/v1/conversations/{id} \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"assignee_id": 42, "status": "pending", "tags": ["refund", "priority"]}'
+```
+
+`assignee_id` is a member of your team (`null` unassigns). `status` is `open`, `pending`, `resolved` or `closed`. `tags` replaces the conversation's tags, creating new names. Assigning starts `human_assignment` workflows and resolving or closing starts `conversation_closed` ones, exactly as in the inbox. If an agent changes the conversation at the same moment you get `409` with `conversation_changed`; fetch it and try again.
+
+**Required scope:** `messages:send`
+
+### Internal notes
+
+Notes are for agents. They show next to the thread in the inbox and are never sent to the contact, so they are where a bot leaves its triage summary.
+
+```bash
+curl -X POST https://lazyapp.in/v1/conversations/{id}/notes \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"body": "Refund for order #1042. Damaged on arrival, photo attached in the chat."}'
+```
+
+`GET /v1/conversations/{id}/notes` lists them, newest first. A note added over the API has `author: null`.
+
 ### Fetch messages
 
 Newest first. `limit` 1–200, default 50.
@@ -168,7 +196,8 @@ Empty `emoji` removes the reaction. Inbound reactions arrive as `reaction.receiv
 
 | Action | Where |
 | --- | --- |
-| Shared inbox UI, assignment, pin / archive / mute | LazyApp **console** |
+| Shared inbox UI, per-agent pin / mute | LazyApp **console** |
+| Assignment, status, tags, notes, workspace archive / pin | Console, or `PATCH /v1/conversations/{id}` and `/notes` |
 | Typing indicator while an agent composes | Console (`POST …/inbox/conversations/{id}/typing`) — session auth |
 | Programmatic list / send / webhooks | Public `/v1` API |
 | Drop-in tenant UI | [Embedded inbox](/platform/embedded-components) |

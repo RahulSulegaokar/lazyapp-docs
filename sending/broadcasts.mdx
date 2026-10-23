@@ -89,9 +89,23 @@ Pass static placeholder values, or personalise per contact:
 - Object slots use `source`: `static`, `contact_attribute` (`key`), or `contact_field` (`field` such as `phone_number`, `email`, `username`).
 - Missing attributes become an empty string so Meta still gets the expected parameter count.
 - `header` fills a text header variable when the template has one.
+- `header_media` is the image, video or document for a media header: a public https URL or an uploaded media id. Carousel cards take theirs in `features.cards[].header_media`.
 - `body` is an ordered array matching `{{1}}`, `{{2}}`, … in the template body.
 
 The number of `body` entries must match the template's placeholder count. A mismatch makes Meta reject the send (parameter-count error).
+
+An image-header marketing template, such as an intake announcement:
+
+```json
+{
+  "variable_map": {
+    "header_media": "https://cdn.acme.example/campus.jpg",
+    "body": [{ "source": "contact_attribute", "key": "first_name" }, "Autumn 2027"]
+  }
+}
+```
+
+The shape of `variable_map` is checked when you create the broadcast, so a misspelt `source` or a `header_media` that is not a string is a `422` now rather than a failed send for every recipient later.
 
 ## Add recipients
 
@@ -117,7 +131,7 @@ curl -X POST https://lazyapp.in/v1/broadcasts/{uuid}/recipients \
 Target either:
 
 1. **`phone_numbers`** — explicit E.164 list (`+919812345670`).
-2. **`contact_segment_id`** — a saved segment from the console (filtered contacts).
+2. **`contact_segment_uuid`** — a [segment](/guides/contacts#segments) you created over the API or in the console. `contact_segment_id` (the integer id) also works.
 
 Recipients must already exist as **contacts** in the workspace with **granted marketing consent**. Numbers that are not contacts, or contacts without consent, are counted in `stats.excluded` with a reason — they are never sent.
 
@@ -145,7 +159,7 @@ curl https://lazyapp.in/v1/contacts/{contact}/consent \
 # 3. Include the number in the broadcast
 ```
 
-There is no public API to create contact segments today — build segments in the console, then pass the numeric `contact_segment_id` to the API.
+To target everyone with a tag, create a [segment](/guides/contacts#segments) filtering on the tag name and pass its `uuid` as `contact_segment_uuid`.
 
 ## Scheduling
 
@@ -283,9 +297,9 @@ reduced.
 
 | Zernio | LazyApp |
 | --- | --- |
-| Create → add recipients → send (three calls) | One `POST /v1/broadcasts` with `phone_numbers` or `contact_segment_id` |
+| Create → add recipients → send (three calls) | One `POST /v1/broadcasts` with `phone_numbers` or `contact_segment_uuid` |
 | `profileId` + `accountId` + `platform: whatsapp` | Workspace scoped by API key |
-| `variableMapping` from contact fields | Static `variable_map` only |
+| `variableMapping` from contact fields | `variable_map` slots with `contact_attribute` or `contact_field` |
 | `POST …/recipients` with `contactIds` or `useSegment` | Recipients on create; segments by id |
 | `POST …/schedule` | `schedule_at` on create |
 | Utility/auth templates in broadcasts | **Marketing** templates only |
