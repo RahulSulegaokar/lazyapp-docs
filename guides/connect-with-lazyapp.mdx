@@ -1,0 +1,123 @@
+---
+title: "Connect with LazyApp (OAuth)"
+description: "Add a “Connect LazyApp” button to your app, so your users connect their workspace without pasting an API key."
+---
+
+If you build software that other businesses use — a CRM, a helpdesk, an ecommerce plugin — you can list LazyApp in your **Integrations** tab. Your user clicks **Connect LazyApp**, signs in to LazyApp, picks a workspace and approves what your app may do. Your app gets an OAuth access token that calls the [LazyApp API](/authentication) for that workspace.
+
+It is standard OAuth 2.0: the authorization code grant with PKCE. Any OAuth client library works.
+
+<Info>
+  Building for your own workspace only? You do not need OAuth. Create an API key under **Settings → API keys**.
+</Info>
+
+## 1. Register your app
+
+In LazyApp, open **Settings → OAuth apps** and click **Add app**.
+
+| Field | What it does |
+| --- | --- |
+| Name | Shown to people on the consent screen. |
+| Redirect URLs | Where LazyApp sends people back after they approve, one per line. `https://` only (`http://` is allowed for `localhost`), no `#fragment`. The `redirect_uri` you send must match one exactly. |
+| Website, Logo URL | Optional. Shown on the consent screen. |
+| Where does your app run? | **On a server** gets a client secret. **Mobile, desktop or browser only** gets no secret and relies on PKCE alone. |
+
+You get a **client ID**. A server app also gets a **client secret**, shown once. Keep it on your server. If it leaks, click **Make new client secret** — the old one stops working at once.
+
+Only members who can manage API keys can add apps.
+
+## 2. Send the user to LazyApp
+
+Generate a random `state` and a PKCE `code_verifier`, keep both in the user's session, and redirect the browser to the authorize URL:
+
+```text
+https://lazyapp.in/oauth/authorize
+  ?client_id=YOUR_CLIENT_ID
+  &redirect_uri=https://yourapp.example/oauth/lazyapp/callback
+  &response_type=code
+  &scope=messages:send messages:read templates:read
+  &state=RANDOM_STATE
+  &code_challenge=BASE64URL(SHA256(code_verifier))
+  &code_challenge_method=S256
+```
+
+The user signs in if needed and sees your app's name, the scopes you asked for, and a list of their workspaces. They can only pick a workspace where they manage API keys. A workspace in live mode also needs the API on its plan and a connected WhatsApp number; otherwise the screen says why it cannot be picked. A workspace in test mode connects to the free test number.
+
+LazyApp shows this screen every time, even if the user connected your app before, because connecting again may mean choosing a different workspace.
+
+## 3. Exchange the code for tokens
+
+LazyApp redirects back to your `redirect_uri` with `code` and `state`. Check `state` matches, then exchange the code from your server:
+
+```bash
+curl https://lazyapp.in/oauth/token \
+  -d grant_type=authorization_code \
+  -d client_id=YOUR_CLIENT_ID \
+  -d client_secret=YOUR_CLIENT_SECRET \
+  -d redirect_uri=https://yourapp.example/oauth/lazyapp/callback \
+  -d code_verifier=THE_CODE_VERIFIER \
+  -d code=THE_CODE
+```
+
+A public app leaves out `client_secret`. The response:
+
+```json
+{
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "access_token": "eyJ0eXAiOiJKV1Qi...",
+  "refresh_token": "def50200..."
+}
+```
+
+If the user clicked **Cancel**, the redirect carries `error=access_denied` instead of a code.
+
+## 4. Call the API
+
+Send the access token exactly like an API key:
+
+```bash
+curl https://lazyapp.in/v1/templates \
+  -H "Authorization: Bearer eyJ0eXAiOiJKV1Qi..."
+```
+
+Everything in [Authentication](/authentication) applies: the token only has the scopes the user approved (`403` outside them), live access follows the workspace's plan (`402` with `plan_limit_reached`), and it acts in the workspace and mode the user picked.
+
+## Refreshing tokens
+
+Access tokens last one hour. Before one expires, get a new one with the refresh token (refresh tokens last 90 days, and each refresh returns a new one):
+
+```bash
+curl https://lazyapp.in/oauth/token \
+  -d grant_type=refresh_token \
+  -d client_id=YOUR_CLIENT_ID \
+  -d client_secret=YOUR_CLIENT_SECRET \
+  -d refresh_token=THE_REFRESH_TOKEN
+```
+
+## Scopes
+
+Ask only for what your app needs. These are the API key [scopes](/authentication#scopes), except the platform-only ones (`customers:write`, `customers:act`), which an OAuth app cannot request:
+
+`messages:send`, `messages:read`, `templates:read`, `templates:write`, `media:write`, `webhooks:write`, `flows:write`, `billing:read`, `billing:write`, `connections:write`, `payments:write`, `catalog:write`.
+
+Separate scopes with spaces in the `scope` parameter.
+
+## When access ends
+
+Your token stops working (`401`) when:
+
+- someone in the workspace clicks **Remove access** under **Settings → OAuth apps → Apps with access to this workspace**;
+- the user who connected your app leaves the workspace or can no longer manage API keys;
+- the user connects your app again and picks a different workspace — the earlier workspace's tokens are revoked;
+- you delete your app.
+
+Send the user through the authorize URL again to reconnect.
+
+## Server metadata
+
+OAuth libraries and integration platforms can configure themselves from the [RFC 8414](https://www.rfc-editor.org/rfc/rfc8414) metadata:
+
+```bash
+curl https://lazyapp.in/.well-known/oauth-authorization-server
+```
