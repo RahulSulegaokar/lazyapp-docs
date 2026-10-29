@@ -8841,6 +8841,11 @@
                   "usage_alert_cents": {
                     "type": "integer",
                     "minimum": 0
+                  },
+                  "manages_customer_replies": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Set `true` when your platform answers this customer's contacts with its own bot. LazyApp's AI reply assistant then never replies on the customer's numbers, an assistant the customer had enabled is switched off, and the console locks the setting."
                   }
                 },
                 "required": [
@@ -9054,6 +9059,10 @@
                   "usage_alert_cents": {
                     "type": "integer",
                     "minimum": 0
+                  },
+                  "manages_customer_replies": {
+                    "type": "boolean",
+                    "description": "Set `true` when your platform answers this customer's contacts with its own bot. LazyApp's AI reply assistant then never replies on the customer's numbers, an assistant the customer had enabled is switched off, and the console locks the setting."
                   }
                 },
                 "description": "`markup_bps`, `pricing_mode`, `category_markups` and `platform_fee` are deprecated. They are no longer stored or returned. A request that still sends them succeeds and the fields are ignored, because LazyApp adds nothing to Meta's rates, so there is no per-customer markup to set."
@@ -27296,6 +27305,10 @@
                 "description": "Charges recorded for these sends, as a decimal string. `0` for sends Meta bills to the business directly. Non-zero only for sends LazyApp pays Meta for, at Meta's rate."
               }
             }
+          },
+          "manages_customer_replies": {
+            "type": "boolean",
+            "description": "Whether the platform answers this customer's contacts itself. When `true`, LazyApp's AI reply assistant never replies on the customer's numbers, and the customer cannot switch it on."
           }
         },
         "description": "`markup_bps`, `pricing_mode`, `category_markups` and `platform_fee` are deprecated. They are no longer stored or returned. A request that still sends them succeeds and the fields are ignored, because LazyApp adds nothing to Meta's rates, so there is no per-customer markup to set."
