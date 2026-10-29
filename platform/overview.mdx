@@ -220,6 +220,29 @@ See [Webhooks](/webhooks/overview) for delivery, retries, and signature verifica
 
 ---
 
+## Answer your customers' contacts yourself
+
+If your platform replies to your customers' contacts with its own bot, claim those replies. Otherwise a customer could switch on LazyApp's AI reply assistant in the console (**Automations** → **AI assistant**), and their contacts would get two answers to every message.
+
+Set `manages_customer_replies` when you create the customer, or later with `PATCH`:
+
+```bash
+curl -X PATCH https://lazyapp.in/v1/platform/customers/cus_9f8b1c2d \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "manages_customer_replies": true }'
+```
+
+Once it is `true`:
+
+- LazyApp's AI reply assistant never replies on that customer's numbers, including messages that were already waiting for it.
+- An assistant the customer had already switched on is switched off.
+- The assistant settings in the customer's console name your platform and cannot be turned on.
+
+The flag is returned on every customer object, so you can check it at any time. It defaults to `false`, so customers you created before it existed keep their current behaviour until you set it. Requests that send it to an older API are not refused, so check that the response contains `"manages_customer_replies": true` before relying on it.
+
+---
+
 ## Rate limits with many tenants
 
 One platform API key is enough for your whole integration. LazyApp limits requests **per key**, not per customer — see [rate limits](/reference/rate-limits) for the ceiling and the headers that report it. Meta separately caps how many unique contacts a number may message in 24 hours; that limit is per connection, reported on [`GET /v1/capabilities`](/concepts/capabilities).

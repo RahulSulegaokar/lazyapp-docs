@@ -3,6 +3,14 @@ title: "Changelog"
 description: "What shipped, newest first."
 ---
 
+<Update label="2026-10-30" description="v1">
+
+**Claim your customers' replies.** Platform customers take `manages_customer_replies` on create and `PATCH`, and every customer object returns it. When it is `true`, LazyApp's AI reply assistant never replies on that customer's numbers, an assistant they had switched on is switched off, and the console locks the setting. Use it when your platform answers contacts with its own bot, so nobody gets two replies. See [Answer your customers' contacts yourself](/platform/overview#answer-your-customers-contacts-yourself).
+
+**Every platform event names the customer.** Template, contact consent, `customer.connected`, `setup_link.failed`, `customer.usage_alert` and customer lifecycle events now carry the `customer` envelope, so you can route them by `customer.external_id` like message events.
+
+</Update>
+
 <Update label="2026-10-23" description="v1">
 
 **Flat plans.** Flat monthly plans (Starter, Growth and Pro) replace the per-message charge. LazyApp adds 0% to Meta's rates: Meta bills each message to the business's own payment method, and the plan is what pays LazyApp. Test mode stays free. See [Plans and limits](/billing/pricing-and-tiers).
