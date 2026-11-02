@@ -421,6 +421,21 @@
                                 }
                               }
                             }
+                          },
+                          "flow": {
+                            "type": "object",
+                            "description": "Templates with a Flow button. Both fields are optional: without `flow_token`, LazyApp makes one that names the flow, so the answers link back to it.",
+                            "properties": {
+                              "flow_token": {
+                                "type": "string",
+                                "description": "Your own token for this session. Comes back with the answers."
+                              },
+                              "flow_action_data": {
+                                "type": "object",
+                                "additionalProperties": true,
+                                "description": "Data for the flow's first screen. Up to 10 KB as JSON."
+                              }
+                            }
                           }
                         }
                       },
@@ -562,6 +577,16 @@
                     "type": "string",
                     "maxLength": 128,
                     "description": "Identity change check: deliver only if the contact's identity hash still matches. Defaults to the hash LazyApp stored."
+                  },
+                  "biz_opaque_callback_data": {
+                    "type": "string",
+                    "maxLength": 512,
+                    "nullable": true,
+                    "description": "Your own tracking string, up to 512 characters. LazyApp passes it to Meta and returns it on every status webhook for this message (`message.queued`, `sent`, `delivered`, `read`, `failed`) and on `GET /v1/messages/{message}`."
+                  },
+                  "voice": {
+                    "type": "boolean",
+                    "description": "`type: audio` only. Sends the audio as a voice note (Meta's `audio.voice`). Use an OGG file with the Opus codec."
                   }
                 }
               }
@@ -891,6 +916,12 @@
                     "required": [
                       "kind"
                     ]
+                  },
+                  "biz_opaque_callback_data": {
+                    "type": "string",
+                    "maxLength": 512,
+                    "nullable": true,
+                    "description": "Your own tracking string, up to 512 characters. LazyApp passes it to Meta and returns it on every status webhook for this message (`message.queued`, `sent`, `delivered`, `read`, `failed`) and on `GET /v1/messages/{message}`."
                   }
                 },
                 "required": [
@@ -2192,7 +2223,7 @@
           "Calls"
         ],
         "summary": "Start a call or ask permission to call",
-        "description": "Two kinds of request.\n\n`type: call_permission_request` (the default) sends the WhatsApp prompt asking the person whether you may call them. Their answer arrives as the `call.permission_request` webhook.\n\n`type: business_initiated` places a call. Send the SDP offer your WebRTC client built in `sdp_offer`; Meta's SDP answer arrives on the calls webhook and shows as `session` on [`GET /v1/calls/{call}`](#tag/calls). Without the person's permission the response is `422` with `code` `call_permission_missing`.\n\nRequires `calling: true` on the connection, otherwise `422` with `code` `capability_unavailable`.\n\n**Required scope:** `messages:send`",
+        "description": "Two kinds of request.\n\n`type: call_permission_request` (the default) sends the WhatsApp prompt asking the person whether you may call them. Their answer arrives as the `call.permission_request` webhook. Inside the 24-hour customer service window the request goes out as an interactive message. Outside it, WhatsApp only takes it as an approved template with \"Ask permission to call\" ticked and no variables: name one with `template` and `template_language`, or LazyApp picks a usable one. With none, the answer is `422` with `code: call_permission_template_required`. `sent_as` says which way it went.\n\n`type: business_initiated` places a call. Send the SDP offer your WebRTC client built in `sdp_offer`; Meta's SDP answer arrives on the calls webhook and shows as `session` on [`GET /v1/calls/{call}`](#tag/calls). Without the person's permission the response is `422` with `code` `call_permission_missing`.\n\nRequires `calling: true` on the connection, otherwise `422` with `code` `capability_unavailable`.\n\n**Required scope:** `messages:send`",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -2258,6 +2289,17 @@
                   },
                   "transcription": {
                     "$ref": "#/components/schemas/CallRecordingOptions"
+                  },
+                  "template": {
+                    "type": "string",
+                    "maxLength": 512,
+                    "nullable": true,
+                    "description": "`call_permission_request` outside the 24-hour window: the approved call permission template to use."
+                  },
+                  "template_language": {
+                    "type": "string",
+                    "maxLength": 15,
+                    "nullable": true
                   }
                 }
               }
@@ -3179,7 +3221,8 @@
                         },
                         "flow_id": {
                           "type": "string",
-                          "maxLength": 64
+                          "maxLength": 64,
+                          "description": "`FLOW` buttons: name the flow by exactly one of `flow_id` (Meta's flow id), `flow_name` or `flow_json`."
                         },
                         "examples": {
                           "type": "array",
@@ -3214,6 +3257,36 @@
                               "maxLength": 2000
                             }
                           }
+                        },
+                        "flow_name": {
+                          "type": "string",
+                          "maxLength": 200,
+                          "description": "`FLOW` buttons: the flow's name, instead of `flow_id`."
+                        },
+                        "flow_json": {
+                          "oneOf": [
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "description": "`FLOW` buttons: the whole Flow JSON, instead of `flow_id`."
+                        },
+                        "flow_action": {
+                          "type": "string",
+                          "enum": [
+                            "navigate",
+                            "data_exchange"
+                          ],
+                          "description": "`FLOW` buttons: `navigate` opens a screen; `data_exchange` asks your data endpoint first."
+                        },
+                        "navigate_screen": {
+                          "type": "string",
+                          "maxLength": 100,
+                          "pattern": "^[A-Za-z_]+$",
+                          "description": "`FLOW` buttons with `navigate`: the screen id to open."
                         }
                       },
                       "required": [
@@ -3477,7 +3550,7 @@
           "Templates"
         ],
         "summary": "Retrieve a template",
-        "description": "By uuid or name.\n\n**Required scope:** `templates:read`",
+        "description": "By uuid or name. Add `refresh=true` to read the template live from Meta first, so status, quality and content are current rather than as of the last sync. A template Meta no longer has is marked deleted.\n\n**Required scope:** `templates:read`",
         "responses": {
           "200": {
             "description": "The template.",
@@ -3531,6 +3604,16 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "Meta could not be read. The stored template is unchanged.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "parameters": [
@@ -3541,6 +3624,16 @@
             "description": "Template uuid or name.",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "required": false,
+            "description": "Read the template from Meta before answering.",
+            "schema": {
+              "type": "boolean",
+              "default": false
             }
           }
         ]
@@ -3610,6 +3703,459 @@
             }
           }
         ]
+      },
+      "put": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Edit a template",
+        "description": "Changes a template and, unless `submit` is `false`, sends it to Meta for review again. An approved template keeps sending its approved version while Meta reviews the edit. Meta allows 1 edit a day and 10 edits in 30 days on an approved template; past that the answer is `422` with `code: template_edit_limit`. Templates Direct Send created, and templates in a state Meta does not allow editing, answer `422` with `code: template_not_editable`.\n\n**Required scope:** `templates:write`",
+        "parameters": [
+          {
+            "name": "template",
+            "in": "path",
+            "required": true,
+            "description": "Template uuid or name.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved, and submitted unless `submit` was `false`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Template"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, the template cannot be edited (`template_not_editable`, `template_edit_limit`), or Meta refused the edit. A refused edit leaves the template as Meta last approved it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 512,
+                    "pattern": "^[a-z0-9_]+$"
+                  },
+                  "language": {
+                    "type": "string",
+                    "maxLength": 16
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "AUTHENTICATION",
+                      "UTILITY",
+                      "MARKETING"
+                    ]
+                  },
+                  "body_text": {
+                    "type": "string",
+                    "maxLength": 1024,
+                    "description": "Use `{{1}}`-style placeholders."
+                  },
+                  "body_examples": {
+                    "type": "array",
+                    "maxItems": 50,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 255
+                    }
+                  },
+                  "footer_text": {
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "header": {
+                    "type": "object",
+                    "properties": {
+                      "format": {
+                        "type": "string",
+                        "enum": [
+                          "NONE",
+                          "TEXT",
+                          "IMAGE",
+                          "VIDEO",
+                          "GIF",
+                          "DOCUMENT",
+                          "LOCATION",
+                          "PRODUCT"
+                        ],
+                        "description": "`GIF` is an MP4 of up to 3.5 MB and marketing only. `PRODUCT` is for catalog templates."
+                      },
+                      "text": {
+                        "type": "string",
+                        "maxLength": 60
+                      },
+                      "examples": {
+                        "type": "array",
+                        "maxItems": 1,
+                        "items": {
+                          "type": "string",
+                          "maxLength": 120
+                        },
+                        "description": "Sample for a `{{1}}` in a text header."
+                      },
+                      "example_handle": {
+                        "type": "string",
+                        "maxLength": 1024,
+                        "description": "From `POST /v1/templates/media`: the sample Meta reviews for an image, video, GIF or document header. GIF is marketing only."
+                      },
+                      "example_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "maxLength": 2000,
+                        "description": "Instead of `example_handle`: a public https URL LazyApp fetches and uploads as the review sample. JPEG, PNG, MP4 or PDF up to 16 MB (an MP4 up to 3.5 MB for `GIF`)."
+                      }
+                    }
+                  },
+                  "buttons": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "QUICK_REPLY",
+                            "URL",
+                            "PHONE_NUMBER",
+                            "OTP",
+                            "FLOW",
+                            "COPY_CODE",
+                            "CATALOG",
+                            "MPM",
+                            "SPM",
+                            "VOICE_CALL"
+                          ]
+                        },
+                        "text": {
+                          "type": "string",
+                          "maxLength": 25
+                        },
+                        "url": {
+                          "type": "string",
+                          "maxLength": 2000,
+                          "description": "Must be https. A trailing `{{1}}` makes the end of the link a send-time value."
+                        },
+                        "phone_number": {
+                          "type": "string",
+                          "maxLength": 32
+                        },
+                        "flow_id": {
+                          "type": "string",
+                          "maxLength": 64,
+                          "description": "`FLOW` buttons: name the flow by exactly one of `flow_id` (Meta's flow id), `flow_name` or `flow_json`."
+                        },
+                        "examples": {
+                          "type": "array",
+                          "maxItems": 1,
+                          "items": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "description": "A full sample link for a dynamic URL."
+                        },
+                        "example": {
+                          "type": "string",
+                          "maxLength": 20,
+                          "description": "Sample coupon code for `COPY_CODE`."
+                        },
+                        "ttl_minutes": {
+                          "type": "integer",
+                          "minimum": 1440,
+                          "maximum": 43200,
+                          "description": "`VOICE_CALL` only: how long the Call on WhatsApp button works after delivery. Meta defaults to 7 days."
+                        },
+                        "app_deep_link": {
+                          "type": "object",
+                          "description": "Marketing URL buttons only: open your Android app first, falling back to the Play Store or the URL.",
+                          "properties": {
+                            "android_deep_link": {
+                              "type": "string",
+                              "maxLength": 2000
+                            },
+                            "android_fallback_playstore_url": {
+                              "type": "string",
+                              "maxLength": 2000
+                            }
+                          }
+                        },
+                        "flow_name": {
+                          "type": "string",
+                          "maxLength": 200,
+                          "description": "`FLOW` buttons: the flow's name, instead of `flow_id`."
+                        },
+                        "flow_json": {
+                          "oneOf": [
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "description": "`FLOW` buttons: the whole Flow JSON, instead of `flow_id`."
+                        },
+                        "flow_action": {
+                          "type": "string",
+                          "enum": [
+                            "navigate",
+                            "data_exchange"
+                          ],
+                          "description": "`FLOW` buttons: `navigate` opens a screen; `data_exchange` asks your data endpoint first."
+                        },
+                        "navigate_screen": {
+                          "type": "string",
+                          "maxLength": 100,
+                          "pattern": "^[A-Za-z_]+$",
+                          "description": "`FLOW` buttons with `navigate`: the screen id to open."
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ]
+                    }
+                  },
+                  "submit": {
+                    "type": "boolean",
+                    "description": "Submit to Meta immediately."
+                  },
+                  "parameter_format": {
+                    "type": "string",
+                    "enum": [
+                      "POSITIONAL",
+                      "NAMED"
+                    ],
+                    "description": "`NAMED` uses `{{first_name}}`-style variables."
+                  },
+                  "library_template_name": {
+                    "type": "string",
+                    "maxLength": 512,
+                    "pattern": "^[a-z0-9_]+$",
+                    "description": "Clone a ready-made template from `GET /v1/templates/library` instead of writing `body_text`."
+                  },
+                  "limited_time_offer": {
+                    "type": "object",
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "maxLength": 16
+                      },
+                      "has_expiration": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "authentication": {
+                    "type": "object",
+                    "properties": {
+                      "add_security_recommendation": {
+                        "type": "boolean"
+                      },
+                      "code_expiration_minutes": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 90
+                      }
+                    }
+                  },
+                  "carousel_cards": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "header_format": {
+                          "type": "string",
+                          "enum": [
+                            "IMAGE",
+                            "VIDEO",
+                            "PRODUCT"
+                          ]
+                        },
+                        "example_handle": {
+                          "type": "string",
+                          "maxLength": 1024,
+                          "description": "From `POST /v1/templates/media`. Not used for `PRODUCT` cards."
+                        },
+                        "body_text": {
+                          "type": "string",
+                          "maxLength": 160
+                        },
+                        "buttons": {
+                          "type": "array",
+                          "maxItems": 2,
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "QUICK_REPLY",
+                                  "URL",
+                                  "PHONE_NUMBER",
+                                  "SPM"
+                                ]
+                              },
+                              "text": {
+                                "type": "string",
+                                "maxLength": 25
+                              },
+                              "url": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "examples": {
+                                "type": "array",
+                                "maxItems": 1,
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "phone_number": {
+                                "type": "string",
+                                "maxLength": 20
+                              }
+                            },
+                            "required": [
+                              "type"
+                            ]
+                          }
+                        },
+                        "example_url": {
+                          "type": "string",
+                          "format": "uri",
+                          "maxLength": 2000,
+                          "description": "Instead of `example_handle`: a public https URL of the card's sample image or video."
+                        }
+                      }
+                    },
+                    "description": "Media carousels take 2 to 10 cards; product carousels exactly 2 when created. Every card has the same button types."
+                  },
+                  "message_send_ttl_seconds": {
+                    "type": "integer",
+                    "minimum": -1,
+                    "maximum": 2592000,
+                    "description": "How long WhatsApp keeps trying to deliver. Authentication 30–900, utility 30–43200, marketing 43200–2592000. `-1` means 30 days (authentication and utility only)."
+                  },
+                  "call_permission_request": {
+                    "type": "boolean",
+                    "description": "Marketing or utility: ask the customer for permission to call them. Body only, no buttons."
+                  },
+                  "cta_url_link_tracking_opted_out": {
+                    "type": "boolean",
+                    "description": "Marketing: turn off Meta's click tracking for URL buttons."
+                  },
+                  "creative_features": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string",
+                      "enum": [
+                        "OPT_IN",
+                        "OPT_OUT"
+                      ]
+                    },
+                    "description": "Marketing: Meta's automatic creative improvements, such as `image_animation` or `add_text_overlay`."
+                  },
+                  "max_price": {
+                    "type": "object",
+                    "description": "Marketing only, after the max price agreement is accepted. Clear it by sending `null` for both fields.",
+                    "properties": {
+                      "bid_amount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "nullable": true,
+                        "description": "The most you pay per 1,000 delivered messages, in minor units of your WhatsApp account currency."
+                      },
+                      "country_multipliers": {
+                        "type": "object",
+                        "nullable": true,
+                        "additionalProperties": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "description": "Two-letter country code to a multiplier of `bid_amount`."
+                      }
+                    }
+                  }
+                },
+                "description": "The same body as creating a template. `name` and `language` are the template's own and cannot change. `category` can change only while the template is a draft or rejected. `submit` defaults to `true`."
+              }
+            }
+          }
+        }
       }
     },
     "/v1/media": {
@@ -3701,7 +4247,7 @@
           "Media"
         ],
         "summary": "Upload media",
-        "description": "Multipart upload. The file is virus-scanned and MIME-checked, images are optimised, and a thumbnail is generated.\n\n**Required scope:** `media:write`",
+        "description": "Multipart upload. The file is virus-scanned and MIME-checked, images are optimised, and a thumbnail is generated.\n\nMeta's limits per type apply: images (JPEG, PNG) up to 5 MB, video (MP4, 3GPP) up to 16 MB, audio up to 16 MB, documents (PDF, Word, Excel, PowerPoint, plain text) up to 100 MB, and WebP stickers up to 100 KB, or 500 KB when animated. A file over its limit, or of a type WhatsApp cannot send, is refused with `422` and a plain sentence, for example \"Images can be up to 5 MB. This one is 7.2 MB.\" Large photos are resized before their size is checked.\n\n**Required scope:** `media:write`",
         "responses": {
           "201": {
             "description": "Uploaded.",
@@ -7568,6 +8114,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "Only products whose name contains this text, or whose product code (`retailer_id`) equals it. Send the same `search` with `cursor` for the next page.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -10110,7 +10665,7 @@
           "Meta-compatible proxy"
         ],
         "summary": "Send a message (Meta shape)",
-        "description": "Meta-shaped endpoint for migrating an existing Cloud API integration. Point your base URL at LazyApp, swap the token for a LazyApp API key, and keep your request and response handling. Errors are returned in Meta's error envelope.\n\n**Required scope:** `messages:send`",
+        "description": "Meta-shaped endpoint for migrating an existing Cloud API integration. Point your base URL at LazyApp, swap the token for a LazyApp API key, and keep your request and response handling. Errors are returned in Meta's error envelope.\n\nIt answers the way Meta does. A send Meta accepts returns `200` with `message_status` `accepted`, or `held_for_quality_assessment` while Meta paces a template. A send Meta refuses returns Meta's own error body (`message`, `type`, `code`, `error_subcode`, `error_data`, `fbtrace_id`) with Meta's HTTP status, so Cloud API error handling keeps working. When LazyApp refuses a send before Meta sees it, the error uses the Meta code a Cloud API client already handles for that case and adds `lazyapp_code` with LazyApp's exact reason: `131047` (24-hour window closed), `131050` (marketing opt-out), `131056` (too many messages to one person), `130429` (the number is sending too fast), `137000` (the contact's identity changed) and `131042` (plan allowance or wallet empty).\n\n`biz_opaque_callback_data` (up to 512 characters) is accepted as on Meta.\n\n**Required scope:** `messages:send`",
         "responses": {
           "200": {
             "description": "Meta-shaped send result.",
@@ -10120,20 +10675,40 @@
                   "type": "object",
                   "properties": {
                     "messaging_product": {
-                      "type": "string"
+                      "type": "string",
+                      "example": "whatsapp"
                     },
                     "contacts": {
                       "type": "array",
                       "items": {
                         "type": "object",
-                        "properties": {}
+                        "properties": {
+                          "input": {
+                            "type": "string"
+                          },
+                          "wa_id": {
+                            "type": "string"
+                          }
+                        }
                       }
                     },
                     "messages": {
                       "type": "array",
                       "items": {
                         "type": "object",
-                        "properties": {}
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Meta's `wamid`."
+                          },
+                          "message_status": {
+                            "type": "string",
+                            "enum": [
+                              "accepted",
+                              "held_for_quality_assessment"
+                            ]
+                          }
+                        }
                       }
                     }
                   }
@@ -10183,6 +10758,106 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Meta or LazyApp refused the send. Meta's own refusals keep Meta's HTTP status, which may also be another 4xx.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "integer",
+                          "example": 131047
+                        },
+                        "error_subcode": {
+                          "type": "integer",
+                          "description": "Present when Meta sent one."
+                        },
+                        "error_data": {
+                          "type": "object",
+                          "properties": {
+                            "messaging_product": {
+                              "type": "string"
+                            },
+                            "details": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "lazyapp_code": {
+                          "type": "string",
+                          "description": "Only on LazyApp's own refusals, for example `customer_service_window_closed`.",
+                          "example": "customer_service_window_closed"
+                        },
+                        "fbtrace_id": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta could not be reached (`code: 131016`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "integer",
+                          "example": 131047
+                        },
+                        "error_subcode": {
+                          "type": "integer",
+                          "description": "Present when Meta sent one."
+                        },
+                        "error_data": {
+                          "type": "object",
+                          "properties": {
+                            "messaging_product": {
+                              "type": "string"
+                            },
+                            "details": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "lazyapp_code": {
+                          "type": "string",
+                          "description": "Only on LazyApp's own refusals, for example `customer_service_window_closed`.",
+                          "example": "customer_service_window_closed"
+                        },
+                        "fbtrace_id": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "parameters": [
@@ -10220,7 +10895,12 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": {}
+                "properties": {
+                  "biz_opaque_callback_data": {
+                    "type": "string",
+                    "maxLength": 512
+                  }
+                }
               }
             }
           }
@@ -10233,7 +10913,7 @@
           "Meta-compatible proxy"
         ],
         "summary": "Upload media (Meta shape)",
-        "description": "Meta-shaped endpoint for migrating an existing Cloud API integration. Point your base URL at LazyApp, swap the token for a LazyApp API key, and keep your request and response handling. Errors are returned in Meta's error envelope.\n\n**Required scope:** `media:write`",
+        "description": "Meta-shaped endpoint for migrating an existing Cloud API integration. Point your base URL at LazyApp, swap the token for a LazyApp API key, and keep your request and response handling. Errors are returned in Meta's error envelope.\n\nMeta's limits per type apply: images (JPEG, PNG) up to 5 MB, video (MP4, 3GPP) up to 16 MB, audio up to 16 MB, documents (PDF, Word, Excel, PowerPoint, plain text) up to 100 MB, and WebP stickers up to 100 KB, or 500 KB when animated. A file over its limit, or of a type WhatsApp cannot send, is refused with `422` and a plain sentence, for example \"Images can be up to 5 MB. This one is 7.2 MB.\"\n\n**Required scope:** `media:write`",
         "responses": {
           "200": {
             "description": "Meta-shaped media id.",
@@ -10354,7 +11034,7 @@
           "Meta-compatible proxy"
         ],
         "summary": "Retrieve media (Meta shape)",
-        "description": "Meta-shaped media metadata. `media` is a LazyApp media uuid or a Meta media id. This returns metadata, not the file bytes.\n\n**Required scope:** `messages:read`",
+        "description": "Asks Meta for the media and returns Meta's answer, including the download `url` (valid for about 5 minutes). `media` is a LazyApp media uuid or a Meta media id, including the id of media a contact sent you. Download the file from `url` with your Meta-style request, or use `GET /v1/messages/{message}/media`.\n\n**Required scope:** `messages:read`",
         "parameters": [
           {
             "name": "version",
@@ -10373,21 +11053,32 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "phone_number_id",
+            "in": "query",
+            "required": false,
+            "description": "Optional, as on Meta: the number the media belongs to.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Meta-shaped media metadata.",
+            "description": "Meta's media details.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "messaging_product": {
-                      "type": "string"
+                      "type": "string",
+                      "example": "whatsapp"
                     },
-                    "id": {
-                      "type": "string"
+                    "url": {
+                      "type": "string",
+                      "description": "Meta's download link, valid for about 5 minutes."
                     },
                     "mime_type": {
                       "type": "string",
@@ -10400,6 +11091,9 @@
                     "file_size": {
                       "type": "integer",
                       "nullable": true
+                    },
+                    "id": {
+                      "type": "string"
                     }
                   }
                 }
@@ -10445,6 +11139,56 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Meta refused the lookup, for example because the media has expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "integer",
+                          "example": 131047
+                        },
+                        "error_subcode": {
+                          "type": "integer",
+                          "description": "Present when Meta sent one."
+                        },
+                        "error_data": {
+                          "type": "object",
+                          "properties": {
+                            "messaging_product": {
+                              "type": "string"
+                            },
+                            "details": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "lazyapp_code": {
+                          "type": "string",
+                          "description": "Only on LazyApp's own refusals, for example `customer_service_window_closed`.",
+                          "example": "customer_service_window_closed"
+                        },
+                        "fbtrace_id": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -16639,7 +17383,7 @@
           "Connections"
         ],
         "summary": "Replace conversation starters",
-        "description": "Replaces all ice breakers (up to 4, 80 characters) and commands (up to 30). No emoji. Send empty arrays to clear.\n\n**Required scope:** `connections:write`",
+        "description": "Replaces all ice breakers (up to 4, 80 characters) and commands (up to 30). No emoji. Send empty arrays to clear. `welcome_reply` is optional; leave it out to keep the current one.\n\n**Required scope:** `connections:write`",
         "parameters": [
           {
             "name": "connection",
@@ -16775,6 +17519,29 @@
                   },
                   "welcome_message": {
                     "type": "boolean"
+                  },
+                  "welcome_reply": {
+                    "type": "object",
+                    "description": "The message the number sends by itself when someone opens a chat with it for the first time. Turning it on keeps `welcome_message` on, because Meta only tells LazyApp about a new chat while that is on.",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "body": {
+                        "type": "string",
+                        "maxLength": 1024,
+                        "description": "Required when `enabled` is `true`."
+                      },
+                      "buttons": {
+                        "type": "array",
+                        "maxItems": 3,
+                        "items": {
+                          "type": "string",
+                          "maxLength": 20
+                        },
+                        "description": "Up to 3 reply buttons, each label different. A tap arrives with the button id `welcome_1`, `welcome_2` or `welcome_3`."
+                      }
+                    }
                   }
                 }
               }
@@ -21399,7 +22166,7 @@
           "Calls"
         ],
         "summary": "Get calling settings",
-        "description": "The number's calling settings from Meta. SIP passwords are never returned.\n\n**Required scope:** `messages:read`",
+        "description": "The number's calling settings from Meta. The SIP password is not included; read it with `POST …/calling-settings/sip-password`.\n\n**Required scope:** `messages:read`",
         "parameters": [
           {
             "name": "connection",
@@ -21675,8 +22442,9 @@
                                   },
                                   "timeout_seconds": {
                                     "type": "integer",
-                                    "minimum": 5,
-                                    "maximum": 60
+                                    "minimum": 0,
+                                    "maximum": 30,
+                                    "description": "How long a call rings before voicemail answers, 0 to 30 seconds."
                                   }
                                 }
                               }
@@ -21686,7 +22454,55 @@
                       },
                       "sip": {
                         "type": "object",
-                        "additionalProperties": true
+                        "description": "Connect your own phone system over SIP. Meta takes one SIP server per number; an empty `servers` list removes it.",
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "ENABLED",
+                              "DISABLED"
+                            ]
+                          },
+                          "webhook_delivery": {
+                            "type": "string",
+                            "enum": [
+                              "ENABLED",
+                              "DISABLED"
+                            ],
+                            "description": "SIP call webhooks. Off unless you turn them on."
+                          },
+                          "servers": {
+                            "type": "array",
+                            "maxItems": 1,
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "hostname"
+                              ],
+                              "properties": {
+                                "hostname": {
+                                  "type": "string",
+                                  "maxLength": 255,
+                                  "example": "sip.acme.example"
+                                },
+                                "port": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 65535,
+                                  "description": "Meta defaults to 5061 (SIP over TLS)."
+                                },
+                                "request_uri_user_params": {
+                                  "type": "object",
+                                  "maxProperties": 10,
+                                  "additionalProperties": {
+                                    "type": "string",
+                                    "maxLength": 128
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
                       }
                     }
                   }
@@ -24531,7 +25347,7 @@
           "Analytics"
         ],
         "summary": "Read WhatsApp analytics",
-        "description": "WhatsApp's own counts for a number's WhatsApp account. See the [analytics guide](/guides/whatsapp-analytics).\n\n**Required scope:** `messages:read`",
+        "description": "WhatsApp's own counts for a number's WhatsApp account. See the [analytics guide](/guides/whatsapp-analytics).\n\n`metric=conversation` answers `422`: Meta removed conversation analytics on 1 Nov 2026.\n\n**Required scope:** `messages:read`",
         "responses": {
           "200": {
             "description": "The report.",
@@ -24567,7 +25383,7 @@
             }
           },
           "404": {
-            "description": "Not found in this workspace.",
+            "description": "Not found in this workspace, or the `group` is not found or not yet created at WhatsApp.",
             "content": {
               "application/json": {
                 "schema": {
@@ -24617,13 +25433,13 @@
               "enum": [
                 "messaging",
                 "pricing",
-                "conversation",
                 "calls",
                 "templates",
                 "template_groups",
                 "groups"
               ]
-            }
+            },
+            "description": "`conversation` is no longer offered: Meta stopped serving conversation analytics on 1 Nov 2026. Use `pricing`."
           },
           {
             "name": "start",
@@ -24777,7 +25593,30 @@
                 "type": "string"
               }
             },
-            "description": "Meta ids, for `templates`, `template_groups` and `groups`."
+            "description": "Meta ids, up to 10, for `templates` and `template_groups`. For `groups`, one Meta group id."
+          },
+          {
+            "name": "product_type",
+            "in": "query",
+            "required": false,
+            "description": "For `templates`: `CLOUD_API` or `MARKETING_MESSAGES_LITE_API`. Left out, a number on the Marketing Messages API gets both, each data point tagged with its `product_type`.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CLOUD_API",
+                "MARKETING_MESSAGES_LITE_API"
+              ]
+            }
+          },
+          {
+            "name": "group",
+            "in": "query",
+            "required": false,
+            "description": "For `groups`: a LazyApp group uuid, instead of a Meta id in `ids[]`. Group analytics cover one group at a time and go back 90 days.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ]
       }
@@ -25748,6 +26587,2018 @@
           }
         }
       }
+    },
+    "/v1/catalog/link-messages": {
+      "post": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Send a catalog link",
+        "description": "Sends your catalog as a link message: text that carries `https://wa.me/c/{number}` with a link preview, which WhatsApp shows as a card with product pictures. Like any text, it reaches the contact only inside the 24-hour customer service window.\n\nRefused with `422` when the number has no catalog, or the catalog is hidden: the customer would otherwise see \"Invalid catalog link\".\n\n**Required scope:** `messages:send`",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Sent.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "uuid": {
+                      "type": "string"
+                    },
+                    "request_id": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string",
+                      "example": "text"
+                    },
+                    "body": {
+                      "type": "string",
+                      "description": "The text sent, including the catalog link."
+                    },
+                    "provider_message_id": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "error_message": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, no catalog or a hidden catalog, the 24-hour window is closed, or Meta refused the send.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "to"
+                ],
+                "properties": {
+                  "to": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "description": "E.164 phone number, e.g. `+919812345670`."
+                  },
+                  "body": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "nullable": true,
+                    "description": "An optional line before the link."
+                  },
+                  "phone_number_id": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "nullable": true
+                  },
+                  "connection_uuid": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "nullable": true
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "nullable": true
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "maxProperties": 20,
+                    "additionalProperties": {
+                      "type": "string",
+                      "maxLength": 512
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/templates/archive": {
+      "post": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Archive templates",
+        "description": "Archives up to 100 templates. An archived template cannot be sent and does not count towards the account's template limit. Meta deletes it after 28 days unless you unarchive it. Meta archives only approved or rejected templates; naming another answers `422` before Meta is called. Templates Meta refused one by one are listed in `failed`, with Meta's reason.\n\n**Required scope:** `templates:write`",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "archived": {
+                      "type": "integer",
+                      "description": "How many templates changed."
+                    },
+                    "failed": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "Template name to Meta's reason."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No WhatsApp connection in this workspace (`code: no_connection`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, a template was not found, or Meta refused the request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Name the templates with `templates`, `hsm_ids`, or both. Every one must be in this workspace.",
+                "properties": {
+                  "templates": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 512
+                    },
+                    "description": "Template uuids or names."
+                  },
+                  "hsm_ids": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string",
+                      "pattern": "^\\d{1,25}$"
+                    },
+                    "description": "Meta template ids."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/templates/unarchive": {
+      "post": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Unarchive templates",
+        "description": "Unarchives up to 100 templates. Meta restores each one's earlier status, which the next sync reads back. Templates Meta refused one by one are listed in `failed`, with Meta's reason.\n\n**Required scope:** `templates:write`",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "unarchived": {
+                      "type": "integer",
+                      "description": "How many templates changed."
+                    },
+                    "failed": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "Template name to Meta's reason."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No WhatsApp connection in this workspace (`code: no_connection`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, a template was not found, or Meta refused the request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Name the templates with `templates`, `hsm_ids`, or both. Every one must be in this workspace.",
+                "properties": {
+                  "templates": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 512
+                    },
+                    "description": "Template uuids or names."
+                  },
+                  "hsm_ids": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string",
+                      "pattern": "^\\d{1,25}$"
+                    },
+                    "description": "Meta template ids."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/templates/bulk-delete": {
+      "post": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Delete templates in bulk",
+        "description": "Deletes up to 100 templates in one Meta call. Meta deletes all of them or none. You cannot reuse an approved template's name for 30 days after deleting it.\n\n**Required scope:** `templates:write`",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deleted": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No WhatsApp connection in this workspace (`code: no_connection`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, a template was not found, or Meta refused the request (`code` is Meta's error code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Name the templates with `templates`, `hsm_ids`, or both. Every one must be in this workspace.",
+                "properties": {
+                  "templates": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 512
+                    },
+                    "description": "Template uuids or names."
+                  },
+                  "hsm_ids": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string",
+                      "pattern": "^\\d{1,25}$"
+                    },
+                    "description": "Meta template ids."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/flows/sync": {
+      "post": {
+        "tags": [
+          "Flows"
+        ],
+        "summary": "Sync flows from WhatsApp",
+        "description": "Reads every flow on the WhatsApp Business account from Meta. Flows made outside LazyApp, for example in WhatsApp Manager, are imported with their Flow JSON. Status changes made there are brought in. A flow that already has Flow JSON in LazyApp keeps it.\n\n**Required scope:** `flows:write`",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Synced.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "synced": {
+                      "type": "integer",
+                      "description": "How many flows were read."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No WhatsApp connection, or Meta refused the request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/flows/{flow}/assets": {
+      "get": {
+        "tags": [
+          "Flows"
+        ],
+        "summary": "List flow assets",
+        "description": "The flow's files at Meta (its Flow JSON), each with a download link that Meta keeps valid for a short time.\n\n**Required scope:** `flows:write`",
+        "parameters": [
+          {
+            "name": "flow",
+            "in": "path",
+            "required": true,
+            "description": "Flow uuid.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The files.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "example": "flow.json"
+                          },
+                          "asset_type": {
+                            "type": "string",
+                            "example": "FLOW_JSON"
+                          },
+                          "download_url": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The flow is not on Meta yet, or Meta refused the request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/account/owned-accounts": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "List owned WhatsApp accounts",
+        "description": "Every WhatsApp Business account owned by the business portfolio behind this number, with each one's service message pricing. `business_id` is `null`, and `accounts` empty, when Meta does not say which portfolio owns the account.\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The accounts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "business_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "accounts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "currency": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "timezone_name": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "example": "Asia/Kolkata"
+                          },
+                          "service_pricing_policy": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "REGULAR",
+                              "PAID_EXEMPT",
+                              null
+                            ]
+                          },
+                          "is_this_account": {
+                            "type": "boolean",
+                            "description": "The account this connection is on."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/username": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Get the business username",
+        "description": "The number's WhatsApp username as Meta has it now, and the names Meta suggests.\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The username.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "username": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "example": "acme.store"
+                    },
+                    "status": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Meta's status: `approved` (customers see it) or `reserved` (yours, shown once Meta turns usernames on for customers).",
+                      "example": "reserved"
+                    },
+                    "suggestions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Names Meta has reserved for this number and is likely to approve. Empty when Meta has none."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Set the business username",
+        "description": "Claims or changes the number's username at Meta. Meta's rules are checked first, so a name Meta would refuse does not use up one of the number's changes: 3 to 35 characters; English letters, numbers, dots and underscores only; at least one letter; no dot at the start or end and no two dots in a row; not starting with `www.`; not ending in a web or file ending such as `.com`. Case does not matter.\n\nMeta allows 2 changes every 14 days per number, and deleting does not reset that. Meta's refusals come back in plain words: the name is taken (147001), the number cannot have one yet (147002), a Facebook Page (147003) or Instagram account (147004) uses it, another number in your business uses it (147005), or too many changes (130429).\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved at Meta.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "username": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "example": "acme.store"
+                    },
+                    "status": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Meta's status: `approved` (customers see it) or `reserved` (yours, shown once Meta turns usernames on for customers).",
+                      "example": "reserved"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "username"
+                ],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 35,
+                    "example": "acme.store"
+                  },
+                  "move_from_other_number": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Take the name from another number in the same business portfolio (Meta's `transfer_action: force_transfer`)."
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Remove the business username",
+        "description": "Removes the username at Meta. Customers see the phone number again.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed. No content."
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/webhook-subscription": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Get the webhook subscription",
+        "description": "Whether Meta sends this WhatsApp Business account's messages and statuses to LazyApp, and which other apps also receive them.\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The subscription.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "subscribed",
+                        "failed",
+                        "other_app",
+                        "unsubscribed",
+                        null
+                      ],
+                      "description": "LazyApp's stored status from the last check."
+                    },
+                    "error": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "checked_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "receiving": {
+                      "type": "boolean",
+                      "description": "Meta lists LazyApp's app right now."
+                    },
+                    "apps": {
+                      "type": "array",
+                      "description": "Every app Meta sends this account's webhooks to.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "override_callback_uri": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "Set when that app sends this account's webhooks to its own URL."
+                          },
+                          "is_this_app": {
+                            "type": "boolean",
+                            "description": "LazyApp's app."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Turn the webhook subscription back on",
+        "description": "Subscribes LazyApp's app to the account again when Meta no longer lists it. When it is already listed nothing is sent to Meta, so a callback override another app set stays in place.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subscribed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "subscribed",
+                        "failed",
+                        "other_app",
+                        "unsubscribed",
+                        null
+                      ],
+                      "description": "LazyApp's stored status from the last check."
+                    },
+                    "error": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "checked_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "receiving": {
+                      "type": "boolean",
+                      "description": "Meta lists LazyApp's app right now."
+                    },
+                    "apps": {
+                      "type": "array",
+                      "description": "Every app Meta sends this account's webhooks to.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "override_callback_uri": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "Set when that app sends this account's webhooks to its own URL."
+                          },
+                          "is_this_app": {
+                            "type": "boolean",
+                            "description": "LazyApp's app."
+                          }
+                        }
+                      }
+                    },
+                    "changed": {
+                      "type": "boolean",
+                      "description": "`false` when LazyApp was already subscribed and nothing was sent to Meta."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Stop the webhook subscription",
+        "description": "Stops Meta sending this account's messages and statuses to LazyApp. **Every number on the account stops receiving messages in LazyApp** until you turn it back on. Refused when the number's access token belongs to another Meta app, because the call would unsubscribe that app instead.\n\n**Required scope:** `connections:write`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stopped; `status` is `unsubscribed`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "subscribed",
+                        "failed",
+                        "other_app",
+                        "unsubscribed",
+                        null
+                      ],
+                      "description": "LazyApp's stored status from the last check."
+                    },
+                    "error": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "checked_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed, or Meta refused the change (see `meta`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded: yours, or Meta’s (`code: meta_rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MetaRefusal"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Meta is temporarily unavailable (`code: meta_unavailable`). Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaRefusal"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connections/{connection}/calling-settings/sip-password": {
+      "post": {
+        "tags": [
+          "Calls"
+        ],
+        "summary": "Read the SIP password",
+        "description": "The password Meta generated for this number, for your SIP server's digest authentication. Every read is recorded in the workspace audit log, and the response is sent with `Cache-Control: no-store`.\n\n**Required scope:** `messages:send`",
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The connection `uuid`."
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional. Makes this write safe to retry: the same key replays the first response instead of acting twice.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The SIP credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection_uuid": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "sip_hostname": {
+                      "type": "string"
+                    },
+                    "sip_username": {
+                      "type": "string"
+                    },
+                    "sip_user_password": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or Meta has no SIP password for this number yet (`code: sip_not_configured`). Turn SIP on with a server first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Calling is unavailable on this connection, or Meta refused the request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/meta/whatsapp/{version}/{phone_number_id}/settings": {
+      "get": {
+        "tags": [
+          "Meta-compatible proxy"
+        ],
+        "summary": "Get calling settings (Meta shape)",
+        "description": "The number's calling settings in Meta's shape (`calling`, and `restrictions` when Meta reports any). Add `include_sip_credentials=true` to get the SIP server's `sip_user_password`, as on Meta; that needs a key with `messages:send`.\n\n**Required scope:** `messages:read`",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "description": "Graph API version segment, for example `v21.0`. Accepted and ignored.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "phone_number_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include_sip_credentials",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Meta-shaped settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "calling": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "restrictions": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanLimitReached"
+          },
+          "403": {
+            "description": "The key lacks the required scope, or is restricted from this phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -25960,6 +28811,11 @@
             "additionalProperties": {
               "type": "string"
             }
+          },
+          "biz_opaque_callback_data": {
+            "type": "string",
+            "nullable": true,
+            "description": "The `biz_opaque_callback_data` you sent with the message."
           },
           "sent_at": {
             "type": "string",
@@ -26583,6 +29439,11 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "url": {
+            "type": "string",
+            "nullable": true,
+            "description": "Only on `GET /v1/media/{media}`: Meta's download link, fetched fresh and valid for about 5 minutes. `null` once Meta's copy has expired or Meta cannot be asked."
           }
         }
       },
@@ -28507,6 +31368,13 @@
                     "type": "string"
                   }
                 }
+              },
+              "sent_as": {
+                "type": "string",
+                "enum": [
+                  "interactive",
+                  "template"
+                ]
               }
             }
           },
@@ -29314,6 +32182,14 @@
                   "string",
                   "null"
                 ]
+              },
+              "service_pricing_policy": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "example": "REGULAR",
+                "description": "How Meta charges this account for service messages: `REGULAR` (standard pricing) or `PAID_EXEMPT` (service messages free). `null` when Meta does not report it for the account."
               }
             }
           },
@@ -29502,7 +32378,31 @@
             }
           },
           "welcome_message": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Meta's `enable_welcome_message`: tell LazyApp when someone opens a chat for the first time."
+          },
+          "welcome_reply": {
+            "type": "object",
+            "description": "The message the number sends by itself when someone opens a chat with it for the first time. Turning it on keeps `welcome_message` on, because Meta only tells LazyApp about a new chat while that is on.",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "body": {
+                "type": "string",
+                "maxLength": 1024,
+                "description": "Required when `enabled` is `true`."
+              },
+              "buttons": {
+                "type": "array",
+                "maxItems": 3,
+                "items": {
+                  "type": "string",
+                  "maxLength": 20
+                },
+                "description": "Up to 3 reply buttons, each label different. A tap arrives with the button id `welcome_1`, `welcome_2` or `welcome_3`."
+              }
+            }
           }
         }
       },

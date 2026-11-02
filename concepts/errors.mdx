@@ -24,8 +24,8 @@ Send refusals also carry a stable `code` so your client can branch without strin
 | `contact_suppressed` | The contact opted out of all messages | Do not retry |
 | `marketing_opt_out` | The contact opted out of marketing | Do not send marketing; transactional may still work |
 | `no_connection` | No WhatsApp connection is configured, or none matches the number asked for | Tell the business to finish setup |
-| `send_burst_limit` | Workspace hit its per-minute send ceiling | Back off; see [rate limits](/reference/rate-limits) |
-| `recipient_rate_limit` | Too many messages to this contact in the last hour | Slow down to this recipient |
+| `send_burst_limit` | Workspace hit its per-minute send ceiling, or the number is sending faster than WhatsApp allows for it | Back off; see [rate limits](/reference/rate-limits#metas-per-number-speed) |
+| `recipient_rate_limit` | Too many messages to this contact: the hourly cap, or WhatsApp's limit of about one message every 6 seconds to the same person | Wait the seconds the `message` names, then send again |
 | `failure_rate_paused` | Most recent outbound messages failed | Fix recipients / connection before retrying |
 | `plan_limit_reached` | A live key on a workspace below Pro. The API and webhooks are Pro features | Change the plan or buy an add-on in **Billing**. Returns `402`. See [below](#402-plan-limit-reached) |
 | `insufficient_credits` | LazyApp pays Meta for this number (partner-managed funding) and the wallet that covers it is empty, or a monthly spending limit set on the account is reached | Add money to the wallet, or raise the limit. Returns `402` |
@@ -115,6 +115,14 @@ When a send fails immediately and synchronously, you get `422` with the provider
 { "message": "Message failed to send: recipient is not a valid WhatsApp user." }
 ```
 
+## Meta's error codes, in plain words
+
+When Meta refuses a message, it gives a number such as `131049` and a short technical note. The failed message, and its `message.failed` webhook, keep Meta's text in `error_message`. In the console, every failed message also shows the code explained in plain words: what happened, whether retrying can help, and what to do, for example "This customer has blocked your WhatsApp number. Do not send again." The [common codes](/reference/media-and-limits#common-meta-provider-codes) are listed in the reference.
+
+Some errors stop a whole number rather than one message. LazyApp keeps the latest of each, and the number's health page shows a **Meta stopped messages from this number** notice for 24 hours, with the reason and what to do. Owners are told at most once a day per error. You receive these as [`account.updated`](/webhooks/events#account-updated) with `field: messages`.
+
+The [Meta-compatible API](/migrating/from-cloud-api#errors) works differently: it returns Meta's own error body, with Meta's HTTP status, so code written for Meta's Cloud API keeps working.
+
 ## Common causes
 
 <AccordionGroup>
@@ -129,8 +137,10 @@ When a send fails immediately and synchronously, you get `422` with the provider
     to `paused` or `disabled` on quality grounds.
   </Accordion>
   <Accordion title="Capability not enabled">
-    Calling, block lists and India payments are gated by Meta per account. Check
-    [`GET /v1/capabilities`](/concepts/capabilities) instead of assuming.
+    Some features are available once Meta approves your account, such as India payments,
+    opt-in links and groups. Others, such as calling, are coming soon because they wait on
+    Meta approving LazyApp itself. Check [`GET /v1/capabilities`](/concepts/capabilities)
+    instead of assuming. See [feature status](/concepts/capabilities#feature-status).
   </Accordion>
   <Accordion title="Contact suppressed">
     A contact who opted out is excluded from marketing sends. That is deliberate; do not

@@ -53,11 +53,24 @@ A free-form reply inside an open [customer service window](/sending/messages#the
 
 These return `422` with `code`, not `429`. Slow down, fix bad recipients, or contact support to raise a ceiling. See [Errors](/concepts/errors).
 
+## Meta's per-number speed
+
+WhatsApp also limits how fast one number can send, and how often it can message the same person. Go over either and Meta refuses the message (`130429` or `131056`), which wastes the send and, if it keeps happening, can hurt the number. So LazyApp paces every send to stay under Meta's limits: API sends, inbox replies, automations and broadcasts all share the same count, across all of LazyApp's servers.
+
+| Limit | Meta's rate | What LazyApp does |
+| --- | --- | --- |
+| Number speed | 80 messages a second by default; 1,000 once Meta upgrades the number (`throughput_level: HIGH`); 20 for a number also used in the WhatsApp Business app | Waits out a gap shorter than a second. A longer wait is refused with `send_burst_limit` |
+| One person | One message every 6 seconds to the same person, with a burst of up to 45 that borrows from the time after it | Refused with `recipient_rate_limit`. The message says how many seconds to wait |
+
+A burst to one person is borrowed time: after 20 quick messages, the next one has to wait about 2 minutes. If you send many short messages to one contact, combine them.
+
+Both refusals come before Meta sees the message, so nothing is sent or charged. Retry after the wait with a **new** [Idempotency-Key](/concepts/idempotency): LazyApp stores a refused request's answer, so the same key would replay the refusal. [Broadcasts](/sending/broadcasts#pacing) wait for a free slot by themselves instead of being refused.
+
 ## Meta's messaging limit
 
 Distinct, and usually the one that constrains you. Meta caps how many unique users a number may message in 24 hours, and raises the tier as you demonstrate good quality: 1K, 10K, 100K, then unlimited.
 
-LazyApp paces [broadcasts](/sending/broadcasts) to your current tier rather than firing everything and collecting failures. [`GET /v1/capabilities`](/concepts/capabilities) reports the tier and the number's quality rating — that is LazyApp's equivalent of an "account health" check.
+LazyApp paces [broadcasts](/sending/broadcasts#pacing) rather than firing everything and collecting failures. [`GET /v1/capabilities`](/concepts/capabilities) reports the tier and the number's quality rating — that is LazyApp's equivalent of an "account health" check.
 
 <Warning>
   Quality is what moves the tier. Recipients marking you as spam or blocking you drives the

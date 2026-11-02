@@ -60,8 +60,10 @@ You do not talk to Meta directly. LazyApp holds the WhatsApp Business Account, t
     pass on requests. See [Workspaces and modes](/concepts/workspaces-and-modes).
   </Accordion>
   <Accordion title="Some features depend on Meta approving your account">
-    Calling, block lists and India payments are gated by Meta per account. Ask
-    [`GET /v1/capabilities`](/concepts/capabilities) what a number supports rather than
-    assuming — it can change without a deploy on your side.
+    India payments, opt-in links, groups, Marketing Messages features and Direct Send are
+    available once Meta approves your account. Calling is coming soon: it waits on Meta
+    approving LazyApp itself. Ask [`GET /v1/capabilities`](/concepts/capabilities) what a
+    number supports rather than assuming — it can change without a deploy on your side. See
+    [feature status](/concepts/capabilities#feature-status).
   </Accordion>
 </AccordionGroup>

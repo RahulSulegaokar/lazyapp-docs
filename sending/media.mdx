@@ -39,20 +39,27 @@ curl https://lazyapp.in/v1/media/url \
 
 The URL form is usually what you want: LazyApp fetches the file and uploads it to Meta, so you do not proxy bytes through your own servers.
 
-Every upload is virus-scanned and MIME-checked. Images are optimised and a thumbnail is generated when enabled.
+Every upload is virus-scanned and checked against [WhatsApp's limits](#supported-formats-and-sizes). Images are optimised and a thumbnail is generated when enabled.
 
 Identical bytes in the same workspace and mode reuse the existing asset when Meta's copy is still valid — a retry of the same file cannot create a duplicate row.
 
-## Supported formats
+## Supported formats and sizes
 
-Default limit is **16 MB** per file (`MEDIA_MAX_SIZE_KB`). Meta may still refuse a type or size that WhatsApp does not accept for that message kind even when LazyApp accepted the upload.
+WhatsApp sets a different size limit for each kind of file. LazyApp checks every upload against Meta's limits before it reaches Meta: `POST /v1/media`, `POST /v1/media/url`, the Meta-compatible upload, the inbox and the media library. That way a file WhatsApp would refuse is turned away at once, with a sentence you can show to people, instead of failing later at send time:
 
-| Kind | Typical MIME types |
-| --- | --- |
-| Images | `image/jpeg`, `image/png`, `image/webp` |
-| Video | `video/mp4`, `video/3gpp` |
-| Audio | `audio/aac`, `audio/amr`, `audio/mpeg`, `audio/mp4`, `audio/ogg` |
-| Documents | `application/pdf`, Office formats, `text/plain` |
+```json
+{ "message": "The given data was invalid.", "errors": { "file": ["Images can be up to 5 MB. This one is 7.2 MB."] } }
+```
+
+| Kind | File types | Largest file |
+| --- | --- | --- |
+| Images | JPEG, PNG (`image/jpeg`, `image/png`) | 5 MB |
+| Video | MP4, 3GPP (`video/mp4`, `video/3gpp`) | 16 MB |
+| Audio | AAC, AMR, MP3, MP4 audio, OGG (`audio/aac`, `audio/amr`, `audio/mpeg`, `audio/mp4`, `audio/ogg`) | 16 MB |
+| Documents | PDF, Word, Excel, PowerPoint, plain text | 100 MB |
+| Stickers | WebP (`image/webp`) | 100 KB, or 500 KB when animated |
+
+A megabyte here is 1,048,576 bytes. WebP is only accepted as a sticker; LazyApp reads the file's header to tell an animated sticker from a still one. `POST /v1/media` shrinks large photos first and checks the size after, so a big phone photo is not refused for its original size.
 
 ## Meta expires media after about 30 days
 
@@ -69,7 +76,11 @@ This catches people out. Meta's copy of an uploaded file is temporary — roughl
 
 For anything you will resend — a catalogue, a logo, a standard form — use `managed`.
 
-See [Media & limits](/reference/media-and-limits) for MIME allow-list, Meta error codes, and messaging caps.
+See [Media & limits](/reference/media-and-limits) for Meta error codes and messaging caps.
+
+## Getting a download link
+
+[`GET /v1/media/{media}`](/api-reference/media/retrieve-media-metadata) returns the stored details plus `url`: Meta's download link, fetched fresh from Meta each time. Meta keeps that link valid for about 5 minutes, so fetch the file straight away rather than storing the link. `url` is `null` once Meta's copy has expired.
 
 ## Sending it
 

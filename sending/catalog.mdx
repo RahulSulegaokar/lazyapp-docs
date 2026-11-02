@@ -58,7 +58,17 @@ curl "https://lazyapp.in/v1/catalog/products" \
   -H "Authorization: Bearer $LAZYAPP_API_KEY"
 ```
 
-Optional query params: `connection_uuid`, `phone_number_id`, `limit`, `cursor`.
+Optional query params: `connection_uuid`, `phone_number_id`, `limit`, `cursor`, `search`.
+
+`search` finds products whose name contains the text, or whose product code (`retailer_id`) is exactly the text. Meta does the search, so it covers the whole catalog, not just one page. Send the same `search` with `cursor` to get the next page of matches:
+
+```bash
+curl -G "https://lazyapp.in/v1/catalog/products" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  --data-urlencode "search=kurta"
+```
+
+The **Products** page in the console has the same search.
 
 **Required scope:** `messages:read`
 
@@ -215,6 +225,22 @@ In the template builder, a product card carousel is a carousel with **Product** 
 ## Catalog links
 
 `catalog_link` from the shop settings is a plain `https://wa.me/c/…` link. Send it in any text message, or put it in a template URL button. When the contact taps it, WhatsApp opens your catalog.
+
+To send it as Meta's catalog link message, which WhatsApp shows as a card with product pictures, use `POST /v1/catalog/link-messages`:
+
+```bash
+curl -X POST https://lazyapp.in/v1/catalog/link-messages \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: shop-link-1042" \
+  -d '{ "to": "+919812345670", "body": "Here is our new collection:" }'
+```
+
+`body` is an optional line before the link, up to 1,000 characters. LazyApp adds your catalog link and turns on the link preview. The answer is `201` with the message's `uuid`, `status` and the full `body` that was sent.
+
+It is a text message, so it reaches the contact only inside the [24-hour window](/sending/messages#the-24-hour-window). LazyApp refuses it with `422` when the number has no catalog or the catalog is hidden, because the contact would otherwise see "Invalid catalog link". In the inbox, it is **Shop link** in the composer.
+
+**Required scope:** `messages:send`
 
 ## Inbound orders
 

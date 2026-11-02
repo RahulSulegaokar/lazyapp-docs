@@ -38,7 +38,9 @@ curl -G "https://lazyapp.in/v1/analytics/whatsapp" \
 | `product_types[]` | For `messaging`: `0` notifications, `2` customer support, `100` Marketing Messages API |
 | `directions[]` | For `calls`: `USER_INITIATED`, `BUSINESS_INITIATED` |
 | `templates[]` | For `templates`: template names. LazyApp turns them into Meta's ids |
-| `ids[]` | For `templates`, `template_groups` and `groups`: Meta's ids, up to 10 |
+| `ids[]` | For `templates` and `template_groups`: Meta's ids, up to 10. For `groups`: one Meta group id |
+| `group` | For `groups`: a LazyApp group uuid, instead of `ids[]` |
+| `product_type` | For `templates`: `CLOUD_API` or `MARKETING_MESSAGES_LITE_API`. See [marketing results](#marketing-messages-results) |
 
 | `metric` | Counts |
 | --- | --- |
@@ -47,8 +49,9 @@ curl -G "https://lazyapp.in/v1/analytics/whatsapp" \
 | `calls` | Calls, their cost and average length |
 | `templates` | Sent, delivered, read, button clicks and cost per template. Needs template insights turned on |
 | `template_groups` | The same per template group |
-| `groups` | Messages, joins and leaves in WhatsApp groups |
-| `conversation` | The old per-conversation counts. Conversations stopped being billed in July 2025, so recent dates return nothing |
+| `groups` | Messages sent, delivered and read, and people who joined or left, for one WhatsApp group |
+
+Meta stopped serving conversation analytics on 1 November 2026, after it stopped billing per conversation. `metric=conversation` now answers `422` without calling Meta. Use `pricing` for what messages cost.
 
 The response passes WhatsApp's data points through unchanged:
 
@@ -62,6 +65,27 @@ The response passes WhatsApp's data points through unchanged:
   "waba_id": "102290129340398"
 }
 ```
+
+## Group analytics
+
+Meta reports one group at a time, for up to the last 90 days. Name the group with its LazyApp `uuid` in `group`, or its Meta id in `ids[]`:
+
+```bash
+curl -G "https://lazyapp.in/v1/analytics/whatsapp" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  --data-urlencode "metric=groups" \
+  --data-urlencode "group=9f8b1c2d-4e5f-4a6b-8c7d-0e1f2a3b4c5d" \
+  --data-urlencode "start=2026-10-01" \
+  --data-urlencode "end=2026-10-31"
+```
+
+More than one group, or a start date more than 90 days back, answers `422`. A `group` that is not in the workspace, or that WhatsApp has not finished creating, answers `404`. In the console, a group's **Activity** tab shows the same counts for the last 30 days. Groups are [available once Meta approves your account](/guides/groups#before-you-start).
+
+## Marketing Messages results
+
+Meta counts templates sent through its [Marketing Messages API](/sending/marketing-messages) separately from the standard route, and leaves them out unless asked. So on a number that sends marketing that way, `metric=templates` reads both and tags each data point with its `product_type`: `CLOUD_API` or `MARKETING_MESSAGES_LITE_API`. Pass `product_type` to read only one.
+
+Marketing Messages sends can also report conversions, such as `WEBSITE_PURCHASES` or `APP_ADD_TO_CART`: pass them in `metric_types[]` with `product_type=MARKETING_MESSAGES_LITE_API`. Those events come from your own Meta Pixel, Conversions API or SDK; LazyApp does not send them.
 
 ## Turn on template insights
 

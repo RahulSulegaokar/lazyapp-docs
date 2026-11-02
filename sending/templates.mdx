@@ -98,6 +98,18 @@ Rules:
 
 `header.format` is `NONE`, `TEXT`, `IMAGE`, `VIDEO`, `GIF`, `DOCUMENT`, `LOCATION` or `PRODUCT`. Button types: `QUICK_REPLY`, `URL`, `PHONE_NUMBER`, `OTP`, `FLOW`, `COPY_CODE`, `CATALOG`, `MPM`, `SPM` and `VOICE_CALL`. URL buttons must be `https://`.
 
+#### Flow buttons
+
+A `FLOW` button opens a [WhatsApp Flow](/guides/flows). Name the flow with exactly one of these, as Meta requires:
+
+| Field | Use it when |
+| --- | --- |
+| `flow_id` | You have Meta's flow id (`provider_flow_id`) |
+| `flow_name` | You know the flow's name |
+| `flow_json` | You want Meta to create the flow from this Flow JSON (an object or a string) |
+
+`flow_action` is `navigate` (open a screen) or `data_exchange` (ask your data endpoint first). With `navigate`, `navigate_screen` names the first screen. When you send the template, pass your own `flow_token` and first-screen data in `template.features.flow`; see [Open a flow from a template](/guides/flows#open-a-flow-from-a-template).
+
 Media headers need a sample for Meta's review: upload it with [`POST /v1/templates/media`](/api-reference/templates/upload-a-header-sample) and pass the handle as `header.example_handle`. Carousels, GIF headers, call buttons, call permission requests, delivery time limits and library templates are on [Template formats](/sending/template-formats).
 
 Authentication templates can pass:
@@ -185,7 +197,16 @@ curl -X POST https://lazyapp.in/v1/templates/sync \
   -H "Authorization: Bearer $LAZYAPP_API_KEY"
 ```
 
-LazyApp also updates statuses from Meta webhooks; sync is for reconciliation.
+LazyApp also updates statuses from Meta webhooks; sync is for reconciliation. To read one template live from Meta, add `refresh=true`:
+
+```bash
+curl "https://lazyapp.in/v1/templates/order_shipped?refresh=true" \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+LazyApp updates its copy first, so status, quality and wording are current. A template Meta no longer has is marked deleted.
+
+Edit, archive and delete in bulk are on [Managing templates](/sending/template-management#edit-a-template).
 
 Delete at Meta and mark deleted locally:
 

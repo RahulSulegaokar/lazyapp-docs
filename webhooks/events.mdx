@@ -24,7 +24,7 @@ Subscribe to what you handle by listing types in `subscribed_events`, or omit it
 | `address.received` | A contact submitted an India [address form](/sending/interactive-messages#address-messages-india). `data.address.values` has the fields |
 | `commerce.order` | A contact sent a cart from your catalog. `data.order` is the message, with the cart in `content.order` (`catalog_id`, `product_items`). It also arrives as `message.received` |
 
-`data.message` includes `conversation_id` (`cnv_…`), `metadata` you attached when sending, the `request_id` of the originating API call, `provider_message_id`, `contact.bsuid` when Meta provides one, and `contact.profile_name`: the WhatsApp profile name Meta sent with an inbound message, so you can greet the sender without looking the contact up. Messages sent to or received in a [group](/guides/groups) carry `group` (`uuid`, `provider_group_id`) and no `conversation_id`. The first message from someone who tapped a Click-to-WhatsApp ad carries the ad in `content.referral` (see [Ad welcome messages](/guides/ad-welcome-messages)).
+`data.message` includes `conversation_id` (`cnv_…`), `metadata` and `biz_opaque_callback_data` you attached when sending, the `request_id` of the originating API call, `provider_message_id`, `contact.bsuid` when Meta provides one, and `contact.profile_name`: the WhatsApp profile name Meta sent with an inbound message, so you can greet the sender without looking the contact up. Messages sent to or received in a [group](/guides/groups) carry `group` (`uuid`, `provider_group_id`) and no `conversation_id`. The first message from someone who tapped a Click-to-WhatsApp ad carries the ad in `content.referral` (see [Ad welcome messages](/guides/ad-welcome-messages)).
 
 `content` carries the structured parts: `content.group_id` when the message was sent in a WhatsApp group, `content.voicemail.call_id` when it is a voicemail left after a missed call, and `content.automatic_events` once Meta detects a lead or purchase in a chat that began from an ad.
 
@@ -102,8 +102,8 @@ One event for every account-level notice Meta sends, so you do not have to subsc
 
 | Field | Meaning |
 | --- | --- |
-| `field` | The Meta webhook field it came from: `account_update`, `account_review_update`, `account_alerts`, `business_capability_update`, `security`, `payment_configuration_update`, `partner_solutions`, `business_username_update`, or `messages` for an account-wide sending error |
-| `event` | The headline, in capitals: for example `ACCOUNT_RESTRICTION`, `APPROVED`, `INCREASED_CAPABILITIES_ELIGIBILITY_DEFERRED`, `PIN_CHANGED`, `NEEDS_CONNECTING` or `ERROR` |
+| `field` | The Meta webhook field it came from: `account_update`, `account_review_update`, `account_alerts`, `business_capability_update`, `security`, `payment_configuration_update`, `partner_solutions`, `business_username_updates`, `messaging_handovers`, `account_settings_update`, or `messages` for an account-wide sending error |
+| `event` | The headline, in capitals: for example `ACCOUNT_RESTRICTION`, `APPROVED`, `INCREASED_CAPABILITIES_ELIGIBILITY_DEFERRED`, `PIN_CHANGED`, `NEEDS_CONNECTING`, `CONTROL_TAKEN`, `PHONE_NUMBER_SETTINGS` or `ERROR` |
 | `details` | Meta's own value, unchanged |
 | `connection` | The connection it applies to, as in `connection.*` events |
 

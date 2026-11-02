@@ -45,11 +45,31 @@ curl https://lazyapp.in/v1/capabilities \
 | [`GET /v1/flows/{flow}/endpoint-health`](/api-reference/flows/check-data-endpoint-health) | Probe the data endpoint |
 | [`GET /v1/flows/{flow}/responses`](/api-reference/flows/list-flow-responses) | Completion payloads |
 | [`POST /v1/flows/copy`](#copy-flows-from-another-number) | Copy flows from another number's WhatsApp Business account |
+| [`POST /v1/flows/sync`](#bring-in-flows-made-elsewhere) | Read every flow from Meta, including ones made in WhatsApp Manager |
+| [`GET /v1/flows/{flow}/assets`](#bring-in-flows-made-elsewhere) | The flow's files at Meta, with short-lived download links |
 | Send Flow | [`POST /v1/messages`](/sending/messages) with `interactive.type: flow`, or a template with a flow button |
 | [`GET /v1/flows/starters`](/guides/flows#starters) / `POST` | List and materialise starter drafts |
 | [`POST /v1/flows/{flow}/duplicate`](/guides/flows#duplicate) | Clone into a new draft |
 | Update published Flow JSON in place | **Not allowed** by Meta. Duplicate, then publish |
 | Data endpoint with encryption | LazyApp hosts the endpoint and handles the encryption. See [data endpoint](#data-endpoint) |
+
+## Build a flow in the console
+
+You do not need to write Flow JSON. **Flows** in the console has a visual builder that covers every component in Flow JSON 7.3, Meta's current version:
+
+- **What people see:** text, rich text, images and image carousels, links, menus.
+- **What people fill in:** short and long answers, pick one, pick several, dropdowns, chips, an agree tick box, a date or calendar, and photo or file uploads.
+- **Logic:** "Show if…" to show a part only when an answer matches, and "Show by answer" to switch between parts.
+- **Buttons and actions:** go to another screen, finish and send the answers back (pre-filled with every answer), ask your server, update this screen, or open a website.
+- **Screens:** mark the last screen, hide sensitive answers, refresh a screen when someone goes back, and rename a screen everywhere it is used.
+
+Each part has plain settings with Meta's limits beside them, and a phone preview shows the selected screen. Meta's per-screen limits and version rules are checked before you save, so a flow Meta would refuse is caught in the browser. The raw JSON is still under **Advanced** if you want it.
+
+## Flow JSON versions
+
+Meta versions the Flow JSON format and freezes old versions. LazyApp creates every new flow, and every starter, on version **7.3**. These versions can still be created and updated: 7.3, 7.2, 7.1, 7.0, 6.3, 6.2, 6.1, 6.0 and 5.1.
+
+Versions 2.1 to 5.0 are frozen. A flow already on one can still be opened and sent, but Meta refuses to save changes to it. LazyApp checks this before calling Meta and answers `422` in plain words, for example "WhatsApp no longer accepts flows on version 4.0. Switch the flow to version 7.3." The console editor has a version picker and tells you what a switch changes.
 
 ## Lifecycle
 
@@ -91,7 +111,7 @@ curl -X POST https://lazyapp.in/v1/flows \
     "name": "Lead capture",
     "categories": ["LEAD_GENERATION"],
     "flow_json": {
-      "version": "7.0",
+      "version": "7.3",
       "screens": [
         {
           "id": "LEAD",
@@ -181,6 +201,32 @@ curl -X POST https://lazyapp.in/v1/flows/copy \
 
 Leave out `flow_names` to copy every flow (Meta copies up to 100 per request). Copies keep their names and status; a name that already exists is reported under `failed` with Meta's reason. In the console: **Flows → ⋯ → Copy flows from another number**.
 
+## Bring in flows made elsewhere
+
+Flows made outside LazyApp, for example in WhatsApp Manager, can be brought in. Sync reads every flow on the account from Meta, page by page. New flows arrive with their Flow JSON, downloaded from Meta, and status changes made in WhatsApp Manager are applied. A flow that already has Flow JSON in LazyApp keeps it, so a sync never overwrites your edits.
+
+```bash
+curl -X POST https://lazyapp.in/v1/flows/sync \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+```json
+{ "synced": 12 }
+```
+
+To see a flow's files at Meta, ask for its assets. Each download link is valid only for a short time, so fetch the file straight away:
+
+```bash
+curl https://lazyapp.in/v1/flows/9f8b1c2d-4e5f-4a6b-8c7d-0e1f2a3b4c5d/assets \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+```json
+{ "data": [ { "name": "flow.json", "asset_type": "FLOW_JSON", "download_url": "https://…" } ] }
+```
+
+In the console, **Download from WhatsApp** in a flow's menu on the **Flows** page downloads the Flow JSON exactly as WhatsApp holds it, which may differ from LazyApp's copy if someone edited the flow elsewhere.
+
 ## Data endpoint
 
 Meta calls a data endpoint for flows that load data while the customer fills them in. That traffic is encrypted with a key pair registered on your number. LazyApp is always the endpoint Meta calls: it keeps the key, decrypts each request and either answers from the Flow JSON (flows without a `data_endpoint_uri`) or forwards plain JSON to your `data_endpoint_uri`, signed with `X-LazyApp-Signature: sha256=…` using the flow's signing secret. Your reply is encrypted back for Meta. Set up the number's key once under **Flows → Secure flow connection**.
@@ -252,6 +298,40 @@ curl -X POST https://lazyapp.in/v1/messages \
 
 Use Meta's `provider_flow_id` as `flow_id`. Workflows can launch published flows with a generated `flow_token` via the `launch_flow` node.
 
+## Open a flow from a template
+
+Outside the 24-hour window, a flow goes out on a template with a **Flow** button. In the console, **Use in a template** on a flow starts a template with the button filled in, and the template builder picks from your saved flows.
+
+Over the API, name the flow on the button with exactly one of `flow_id` (Meta's id), `flow_name` or `flow_json`:
+
+```json
+{
+  "type": "FLOW",
+  "text": "Book a table",
+  "flow_name": "Table booking",
+  "flow_action": "navigate",
+  "navigate_screen": "BOOKING"
+}
+```
+
+`flow_action` is `navigate` (open `navigate_screen`) or `data_exchange` (ask your [data endpoint](#data-endpoint) first). See [Templates](/sending/templates#flow-buttons).
+
+When you send the template, LazyApp adds the Flow button's part of the message for you. Pass your own token, and data for the first screen, in `template.features.flow`:
+
+```json
+{
+  "type": "template",
+  "to": "+919812345670",
+  "template": {
+    "name": "table_booking",
+    "language": "en",
+    "features": { "flow": { "flow_token": "booking-1042", "flow_action_data": { "party_size": "2" } } }
+  }
+}
+```
+
+Both are optional. Without a `flow_token`, LazyApp makes one that names the flow, so the answers still [link back to it](#collect-responses). `flow_action_data` can be up to 10 KB as JSON.
+
 ## Collect responses
 
 When the contact finishes, Meta delivers an interactive `nfm_reply`. LazyApp:
@@ -294,9 +374,13 @@ Prefer webhooks for live capture; list + console CSV export are for backfill and
 | --- | --- |
 | `/v1/whatsapp/flows/*` | Flat `/v1/flows/*` |
 | `POST …/flows/send` | [`POST /v1/messages`](/sending/messages) interactive |
-| Flow JSON / versions / preview as separate public routes | Create + show (`flow_json` on retrieve); versioning via console clone |
+| Flow JSON / versions / preview as separate public routes | Create + show (`flow_json` on retrieve), [assets](#bring-in-flows-made-elsewhere); versioning via console clone |
 | Managed data-endpoint hosting | LazyApp hosts and encrypts; your `data_endpoint_uri` gets plain signed JSON |
 | `accountId` on every call | Workspace from API key |
+
+## Flow metrics
+
+Meta deprecated its Flow metrics API on 30 April 2026, so LazyApp does not offer it. Use [`GET /v1/flows/{flow}/responses`](/api-reference/flows/list-flow-responses) and the `flow.*` webhooks to count completions.
 
 ## Related
 

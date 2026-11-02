@@ -5,7 +5,9 @@ description: "Every WhatsApp webhook field Meta sends, what LazyApp does with it
 
 Meta sends LazyApp a webhook for everything that happens on your WhatsApp number: messages, delivery receipts, calls, template reviews, account notices. You never receive Meta's raw webhooks. LazyApp verifies each one (`X-Hub-Signature-256`), stores it, updates your workspace, and sends you a cleaner, [signed](/webhooks/verifying) LazyApp event.
 
-This page maps each Meta field to that event, so you know nothing is lost in between.
+This page maps each Meta field to that event, so you know nothing is lost in between. LazyApp handles every field listed here as Meta documents it for Graph API v26.0.
+
+Two labels appear below. **Coming soon** means LazyApp handles the field but Meta has not yet approved LazyApp's app for it, so no events arrive yet. **Needs Conversation Routing** means Meta sends the field only after you share your number with another app or Meta Business Agent, and turn on Conversation Routing for LazyApp in Meta Business Suite.
 
 ## Messages
 
@@ -22,13 +24,17 @@ This page maps each Meta field to that event, so you know nothing is lost in bet
 | `messages` in a group (`group_id`) | Stores it with `content.group_id` | `message.received` |
 | `messages`: voicemail (audio with a `wacid.` id) | Stores it as a voice note with `content.voicemail.call_id` | `message.received` |
 | `messages`: `statuses` | Moves the message to sent, delivered, read, played or failed; settles pricing | `message.sent`, `message.delivered`, `message.read`, `message.played`, `message.failed` |
-| `messages`: account-wide `errors` (for example `130429` rate limit) | Logs and forwards | `account.updated` (`event: ERROR`) |
-| `smb_message_echoes`, `message_echoes` | Stores replies sent from the WhatsApp Business app or another app | `message.echo` |
+| `messages`: account-wide `errors` (for example `131048` spam limit) | Keeps the latest of each error on the number with how often it happened. The number's health page shows **Meta stopped messages from this number** for 24 hours, in plain words, and owners are told at most once a day per error | `account.updated` (`field: messages`, `event: ERROR`) |
+| `smb_message_echoes` | Stores replies sent from the WhatsApp Business app on a coexistence number | `message.echo` |
+| `message_echoes` | **Coming soon**: Meta has not yet given LazyApp's app Advanced access to this field. It will store messages another app sends from your number | `message.echo` |
+| `standby` | **Needs Conversation Routing.** Messages, replies and receipts from chats that another app or Meta Business Agent owns. Stored as chat history only: no automations, no AI replies | Nothing |
 | `history` | Imports up to six months of chat history when a WhatsApp Business app number connects | Nothing (bulk import) |
-| `smb_app_state_sync` | Syncs contacts from the WhatsApp Business app | `contact.updated` |
+| `smb_app_state_sync` | Syncs contacts from the WhatsApp Business app: their name, WhatsApp username and business-scoped user ID. A removed contact that the sync created and nobody chatted with is deleted; one with chats keeps them | `contact.updated` |
 | `user_preferences` | A customer stopped or resumed marketing messages: updates consent | `contact.opted_out`, `contact.opted_in` |
 
 ## Calls
+
+**Coming soon**: calling waits on Meta's calling approval for LazyApp's app. See [Calling](/guides/calling).
 
 | Meta field / event | What LazyApp does | You receive |
 | --- | --- | --- |
@@ -50,22 +56,24 @@ This page maps each Meta field to that event, so you know nothing is lost in bet
 
 | Meta field | What LazyApp does | You receive |
 | --- | --- | --- |
-| `flows` | Updates the flow status, records endpoint alerts, tells admins about blocks | `flow.status_changed` |
+| `flows` | Updates the flow status, records endpoint and client error alerts, and keeps Meta's warning that the flow's version will soon stop working. Tells owners and admins in plain words, once per warning | `flow.status_changed` |
 
 ## Account and numbers
 
 | Meta field | What LazyApp does | You receive |
 | --- | --- | --- |
-| `phone_number_quality_update` | Updates quality and messaging limit | `phone_number.quality_changed` |
+| `phone_number_quality_update` | Updates quality and the messaging limit. The limit belongs to the business portfolio, so it is copied to every number in it. A speed upgrade sets `throughput_level` to `HIGH` and tells owners | `phone_number.quality_changed` |
 | `phone_number_name_update` | Applies an approved display name | `phone_number.updated` |
-| `account_update` | Moves the connection on bans, restrictions, disconnects and reconnects | `account.updated`, plus `connection.*` when the status changes |
+| `account_update` | Moves the connection on bans, restrictions, disconnects and reconnects. Also records a new partner on the account, a linked ad account, the result of business verification, and why a number was disconnected (for example, it was registered in the WhatsApp app). Tells the team | `account.updated`, plus `connection.*` when the status changes |
 | `account_review_update` | Applies Meta's review decision | `account.updated` |
 | `account_alerts` | Keeps the latest alert per type, tells owners and admins | `account.updated` |
 | `business_capability_update` | Updates the messaging limit on every number of the account | `account.updated` |
 | `security` | Records two-step PIN changes in the audit log, tells admins | `account.updated` |
 | `payment_configuration_update` | Keeps the payment configuration status (India and Brazil payments) | `account.updated` |
-| `partner_solutions` | Forwards Multi-Partner Solution changes | `account.updated` |
-| `business_username_update` | Records the username status | `account.updated` |
+| `partner_solutions` | Records the Multi-Partner Solution status on the numbers involved. Multi-Partner Solutions are **coming soon**: they need Meta's Solution Partner status for LazyApp | `account.updated` |
+| `business_username_updates` | Records the [username](/guides/phone-numbers#business-username) status (`approved`, `reserved` or `deleted`). Tells the team when Meta revokes a name | `account.updated` |
+| `messaging_handovers` | **Needs Conversation Routing.** Records who owns each chat. When another app takes a chat, LazyApp pauses its AI assistant on that chat, because Meta refuses replies from an app that does not own it (error `131070`) | `account.updated` (`event: CONTROL_PASSED` or `CONTROL_TAKEN`) |
+| `account_settings_update` | Keeps the number's calling settings as Meta reports them | `account.updated` (`event: PHONE_NUMBER_SETTINGS`) |
 
 ## Groups
 
@@ -85,6 +93,10 @@ This page maps each Meta field to that event, so you know nothing is lost in bet
 ## Why not send Meta's webhooks straight to you?
 
 Meta lets an app point a number's or account's webhooks at another URL. LazyApp does not offer that: the inbox, billing, automations and these events all depend on LazyApp receiving them. Every field above reaches you through your [webhook endpoints](/webhooks/overview), filtered by number and, for platforms, by customer.
+
+If you also connected the account to another Meta app, Meta sends that app the same webhooks. To see which apps receive them, open the number's settings and go to **Advanced → Receiving messages**, or call [`GET /v1/connections/{uuid}/webhook-subscription`](/guides/phone-numbers#receiving-messages). The same card turns LazyApp's subscription back on if it was removed.
+
+Meta also lists a `consumer_profile` field, but documents no payload for it yet, so LazyApp does not handle it.
 
 ## Related
 

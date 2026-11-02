@@ -9,6 +9,10 @@ You cannot add people yourself. You share an invite link; people choose to join.
 
 ## Before you start
 
+<Info>
+  **Available once Meta approves your account.** LazyApp supports groups today. Meta offers them only to a business it has given the blue tick, so groups switch on for your number once Meta approves yours. See [feature status](/concepts/capabilities#feature-status).
+</Info>
+
 Meta offers groups only to an **Official Business Account** (the blue tick) on a Cloud API number. Numbers that also use the WhatsApp Business app (coexistence) cannot use groups.
 
 Check, and switch the feature on for a number:
@@ -206,4 +210,8 @@ Pins last 1 to 30 days; send `"action": "unpin"` to remove one. Only three messa
 
 ## In the console
 
-**Groups** lists your groups with their status and members. Open one to chat with the group, approve join requests, remove people, copy or reset the invite link, rename it, change its photo, pin messages and delete it.
+**Groups** lists your groups with their status and members. Open one to chat with the group, approve join requests, remove people, copy or reset the invite link, rename it, change its photo, pin messages and delete it. The photo card checks the picture before upload and shows a preview. The **Activity** tab shows messages sent, delivered and read, and people who joined or left, over the last 30 days.
+
+## Group analytics
+
+The same counts are on the API, for up to 90 days back: [`GET /v1/analytics/whatsapp?metric=groups`](/guides/whatsapp-analytics#group-analytics) with the group's `uuid` in `group`. Meta reports one group per request.
