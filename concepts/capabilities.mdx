@@ -3,7 +3,7 @@ title: "Capabilities"
 description: "Ask what a number supports instead of assuming."
 ---
 
-Meta does not open every WhatsApp feature to every account. Calling, block lists and India payments are granted per business, sometimes per number, and sometimes only in certain countries.
+Meta does not open every WhatsApp feature to every account. India payments, opt-in links and groups are switched on per business, sometimes per number, and sometimes only in certain countries. A few features, such as calling, also wait on Meta approving LazyApp itself.
 
 So LazyApp does not let you hard-code that knowledge. Ask:
 
@@ -41,11 +41,35 @@ curl https://lazyapp.in/v1/capabilities \
 
 Two different reasons, and the distinction matters:
 
-- **Meta has not granted it to you.** Calling starts `false` for everyone. When Meta approves your account, LazyApp turns it on per connection — no deploy on your side, no code change. Your integration should start working the moment the flag flips.
+- **Meta has not granted it yet.** Calling starts `false` for everyone, because Meta has not yet approved calling for LazyApp's app. Once it does, LazyApp turns it on per connection — no deploy on your side, no code change. Your integration should start working the moment the flag flips.
 - **Your number does not qualify yet.** `groups` and `messages.group` need an Official Business Account. [`POST /v1/groups/eligibility`](/guides/groups#before-you-start) checks Meta and flips both flags to match.
 - **Switched off for one connection.** Block lists (`block_users`) and catalog sync default on; a connection can turn either off.
 
 Either way the correct client behaviour is the same: read the flag, and degrade gracefully when it is `false`.
+
+## Feature status
+
+These docs use two labels for features you cannot use straight away. The difference is who has to say yes.
+
+**Available once Meta approves your account.** LazyApp supports the feature today. Meta switches it on for each business, so it works as soon as Meta approves yours:
+
+| Feature | What Meta looks for |
+| --- | --- |
+| [India payments](/guides/payments-india) | An Indian business that has accepted WhatsApp's payment terms, with a payment setup Meta has made active |
+| [Opt-in links](/guides/growth-tools#opt-in-links-in-app-signup) | A business outside the markets where Meta does not offer them |
+| [Group chats](/guides/groups) | The blue tick (Official Business Account) on a Cloud API number |
+| [Marketing Messages](/sending/marketing-messages) features | Meta's marketing terms accepted and a payment method on the WhatsApp account |
+| [Direct Send](/sending/direct-send) | A messaging limit of 100,000 or unlimited for utility messages; an approved application to Meta for login codes |
+
+**Coming soon.** LazyApp has built the feature, and it is waiting on Meta approving LazyApp's own Meta app. Nothing is needed from you, and no code change will be needed when it arrives:
+
+| Feature | What LazyApp is waiting for |
+| --- | --- |
+| [Calling](/guides/calling) | Meta's calling approval for LazyApp's app |
+| The `message_echoes` webhook (messages another app sends from your number) | Advanced access to that webhook for LazyApp's app |
+| Ad spend in [ad results](/guides/ad-results) | Meta's `ads_read` permission for LazyApp |
+| Editing your catalog from LazyApp ([Manage products](/sending/catalog-inventory)) | Meta's `catalog_management` permission for LazyApp |
+| Multi-Partner Solutions (sharing a number with another Meta partner) | Meta's Solution Partner status for LazyApp |
 
 ## Using it well
 

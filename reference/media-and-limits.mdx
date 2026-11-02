@@ -5,27 +5,23 @@ description: "Upload limits, Meta constraints, delivery analytics, and common er
 
 Quick reference for media uploads, WhatsApp limits, and failures. Upload mechanics and retention are in [Media](/sending/media); HTTP rate caps are in [Rate limits](/reference/rate-limits).
 
-## LazyApp upload limits
+## Upload limits
 
-LazyApp applies one default ceiling to every upload: **16 MB** per file (`MEDIA_MAX_SIZE_KB`, default `16384`). Files are virus-scanned and checked against an allow-list of MIME types.
+WhatsApp sets a size limit for each kind of file, and LazyApp applies exactly those limits to every upload. Checking at upload time means a file WhatsApp would refuse fails straight away, with a plain sentence such as "Images can be up to 5 MB. This one is 7.2 MB.", rather than at send time. Files are also virus-scanned.
 
-Meta may still refuse a file that passed LazyApp — WhatsApp enforces **stricter per-type limits** on Graph. When in doubt, follow [Meta's media documentation](https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media).
+| Kind | File types | Largest file |
+| --- | --- | --- |
+| **Images** | `image/jpeg`, `image/png` | 5 MB |
+| **Video** | `video/mp4`, `video/3gpp` | 16 MB |
+| **Audio** | `audio/aac`, `audio/amr`, `audio/mpeg`, `audio/mp4`, `audio/ogg` | 16 MB |
+| **Documents** | `application/pdf`, Word, Excel and PowerPoint (`doc`, `docx`, `xls`, `xlsx`, `ppt`, `pptx`), `text/plain` | 100 MB |
+| **Stickers** | `image/webp` | 100 KB, or 500 KB when animated |
 
-| Kind | MIME types LazyApp accepts (default) |
-| --- | --- |
-| **Images** | `image/jpeg`, `image/png`, `image/webp` |
-| **Video** | `video/mp4`, `video/3gpp` |
-| **Audio** | `audio/aac`, `audio/amr`, `audio/mpeg`, `audio/mp4`, `audio/ogg` |
-| **Documents** | `application/pdf`, Office formats (`doc`, `docx`, `xls`, `xlsx`, `ppt`, `pptx`), `text/plain` |
-| **Stickers** | Uploaded as `sticker` sends — same upload path |
-
-<Info>
-  Zernio documents separate caps (for example 5 MB images, 100 MB documents). LazyApp does **not** split caps by type at upload time — only the single 16 MB default unless your deployment changes `MEDIA_MAX_SIZE_KB`. Meta's acceptance rules still apply at send time.
-</Info>
+A megabyte is 1,048,576 bytes. WebP is accepted only as a sticker. These are Meta's own limits, so they are the same whether you upload through `POST /v1/media`, `POST /v1/media/url`, the [Meta-compatible proxy](/migrating/from-cloud-api), the inbox or the media library. See [Media](/sending/media#supported-formats-and-sizes).
 
 ### Voice notes
 
-True voice-message UI (waveform bubble) is available from the **console inbox** composer. Public [`POST /v1/messages`](/sending/messages) sends audio attachments without a `voice` flag today. For OPUS `.ogg` voice notes via API, use the [Meta-compat proxy](/migrating/from-cloud-api) if you need Meta's `audio.voice` field.
+A voice note shows in WhatsApp as a recording with a waveform, not as an audio file. Send one with [`POST /v1/messages`](/sending/messages), `type: audio` and `"voice": true`. Meta expects an OGG file with the Opus codec for this. Without `voice`, audio is sent as an ordinary audio file, which is what you want for an MP3.
 
 ### URL import failures
 
@@ -37,10 +33,12 @@ When LazyApp fetches `media_url` for you, the URL must be **publicly reachable**
 | --- | --- |
 | **24-hour window** | Free-form sends only within 24 hours of the contact's last inbound message — enforced server-side (`customer_service_window_closed`) |
 | **New number throughput** | Meta tier often starts at `TIER_250` (~250 unique contacts / 24 h) — see `messaging_limit_tier` on [`GET /v1/capabilities`](/concepts/capabilities) |
+| **Number speed** | 80 messages a second per number, 1,000 once Meta upgrades it, 20 on a number shared with the WhatsApp Business app. LazyApp paces sends to stay under it: [Rate limits](/reference/rate-limits#metas-per-number-speed) |
+| **One person** | About one message every 6 seconds to the same person, with short bursts allowed. LazyApp paces this too |
 | **LazyApp send velocity** | Abuse guards: workspace burst, per-recipient hourly cap, failure-rate pause — [Rate limits](/reference/rate-limits) |
-| **API rate** | Default **120 requests / minute / API key** |
+| **API rate** | Set by your plan, per API key — [Rate limits](/reference/rate-limits) |
 
-Broadcasts pace to your Meta tier rather than firing all recipients at once — see [Broadcasts](/sending/broadcasts).
+Broadcasts pace themselves to these limits rather than firing all recipients at once, and the campaign page says when and why — see [Broadcasts](/sending/broadcasts#pacing).
 
 ## Analytics
 
@@ -55,7 +53,7 @@ What LazyApp gives you instead:
 | Spend / category | Console **Usage** ledger and [platform usage API](/platform/usage) |
 | Quality / tier | [`GET /v1/capabilities`](/concepts/capabilities) + `phone_number.quality_changed` webhooks |
 
-There is no dedicated analytics API.
+For WhatsApp's own counts of messages, charges and template results, use the [WhatsApp analytics API](/guides/whatsapp-analytics).
 
 ## What you cannot do
 
@@ -78,25 +76,41 @@ Stable `code` values on API refusals before Meta — branch on these, not `messa
 | `contact_suppressed` | Contact opted out entirely | Do not retry |
 | `marketing_opt_out` | Marketing opt-out | No marketing sends |
 | `no_connection` | No WhatsApp connection | Finish [connecting WhatsApp](/guides/connecting-whatsapp) |
-| `send_burst_limit` | Workspace send burst | Back off — [Rate limits](/reference/rate-limits) |
-| `recipient_rate_limit` | Too many sends to one number | Slow down |
+| `send_burst_limit` | Workspace send burst, or the number is sending faster than WhatsApp allows | Back off — [Rate limits](/reference/rate-limits) |
+| `recipient_rate_limit` | Too many sends to one person: the hourly cap, or WhatsApp's one message about every 6 seconds | Wait the seconds the message names, then retry |
 | `failure_rate_paused` | Recent sends mostly failed | Fix connection / recipients |
 
 Full list: [Errors](/concepts/errors).
 
 ## Common Meta provider codes
 
-When Meta rejects a send, the message row and `message.failed` webhook carry Meta's numeric code. LazyApp maps the common ones in the console message detail:
+When Meta rejects a send, the message row and `message.failed` webhook carry Meta's numeric code. The console explains each code in plain words, with what to do next. The common ones:
 
 | Code | Meaning | Fix |
 | --- | --- | --- |
 | **131047** | Re-engagement required — outside the 24-hour window | Send an approved template |
 | **131026** | Recipient undeliverable — not on WhatsApp or cannot accept this message | Verify E.164 number and WhatsApp registration |
-| **132001** (and related 132xxx) | Template missing, paused, or parameter mismatch | Match template name, language, and parameters exactly |
-| **131049** | Marketing throttled by Meta | Reduce marketing volume to this contact |
-| **130429**, **131048** | Throughput / tier limit | Retry with backoff |
-| **131056** | Too many messages to this recipient quickly | Pause and retry |
-| **131031**, **133004**, **133005**, **133006**, **133010** | Number not registered / account restricted | Re-register in **Connections** |
+| **131050** | The customer told WhatsApp they want no marketing from you | Do not send them marketing; service and utility messages still reach them |
+| **130403** | The customer blocked your number | Do not send again |
+| **132000**, **132001**, **132005**, **132007**, **132012**, **132018** | Template missing, paused, or parameter mismatch | Match template name, language, and parameters exactly |
+| **132015** | Template paused for poor feedback | Unpause or edit it |
+| **132068**, **132069** | The Flow on the message is blocked, or slowed to 10 messages an hour while it has problems | Fix the Flow and publish it again |
+| **131049** | The person has had enough marketing for now | Wait at least 24 hours before trying them again |
+| **130429** | The number sent faster than WhatsApp allows (80 a second for most numbers) | Nothing to change; sending slows down and retries |
+| **131048** | WhatsApp limited the number because many recent messages were blocked or reported | Check the number's quality and send only to people who asked to hear from you |
+| **131056** | Too many messages to one person in a short time (about one every 6 seconds) | Wait a minute and retry |
+| **131042** | Meta could not charge the WhatsApp account's payment method | Fix the payment method in WhatsApp Manager |
+| **131052**, **131053** | A file could not be downloaded, or WhatsApp could not use the attached file | Re-send a file within the [limits](#upload-limits) |
+| **131021** | Sent to your own number | Send to the customer's number |
+| **131045** | The number is not fully registered | Finish registering it |
+| **131055**, **134100**, **134101**, **134102** | A marketing-route problem: not a marketing template, or Meta has not finished preparing the template | Use a marketing template, or wait 10 minutes after approval |
+| **133016** | Registered and removed too many times | Wait for the block to lift |
+| **2494100** | The number is briefly in maintenance at Meta | Retry in a few minutes |
+| **33** | The number no longer exists at Meta | Connect it again |
+| **131031**, **133005**, **133006**, **133010** | Number not registered / account restricted | Re-register in **Connections** |
+| **131000**, **1**, **131016**, **2**, **133004**, **4** | A temporary problem at Meta | Retry |
+| **10**, **200**, **131005** | A permission LazyApp needs is missing | Reconnect the number and allow every permission |
+| **100**, **131008**, **131009** | Meta did not accept part of the message | Fix the detail Meta names |
 | **190**, **0**, **3** | Access token invalid or expired | Reconnect the WABA |
 | **131037** | Display name not approved | Fix verified name in WhatsApp Manager |
 

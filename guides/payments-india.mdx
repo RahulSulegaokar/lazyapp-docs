@@ -25,6 +25,10 @@ WhatsApp payments are for Indian businesses charging in INR. Brazil and Mexico h
 
 ## Before you start
 
+<Info>
+  **Available once Meta approves your account.** LazyApp supports payments today. Meta switches them on per business: you accept WhatsApp's payment terms, and Meta makes your payment setup active. See [feature status](/concepts/capabilities#feature-status).
+</Info>
+
 1. **Accept WhatsApp's payment terms.** Meta asks the business to accept them in WhatsApp Manager the first time. Until then, payment calls fail with a plain message and a link to the terms.
 2. **Add a payment setup** (for `payment_gateway` or a UPI ID). In the console, open **Payments → Set up payments**. You can also call `POST /v1/payments/configurations`.
 3. **Or add your gateway keys** (for `upi_intent_link` and `payment_link`). Open **Payments → Set up payments → Gateway accounts**, or call `POST /v1/payments/gateway-accounts`.

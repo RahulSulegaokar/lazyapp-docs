@@ -1,6 +1,6 @@
 ---
 title: "QR codes, opt-in links and conversation starters"
-description: "Get people into a WhatsApp chat with you: QR codes with a typed message, opt-in links that subscribe people inside WhatsApp, and ice breakers that suggest what to ask."
+description: "Get people into a WhatsApp chat with you: QR codes with a typed message, opt-in links that subscribe people inside WhatsApp, ice breakers that suggest what to ask, and a welcome reply."
 ---
 
 Three free tools bring customers to your number. None of them sends a message by itself, so none of them costs anything per use. Find them in the console under **Connections → Settings → Messaging**, or use the API below. Reads need `messages:read`; changes need [`connections:write`](/reference/scopes).
@@ -9,7 +9,7 @@ Three free tools bring customers to your number. None of them sends a message by
 | --- | --- | --- |
 | QR code / short link | Posters, packaging, receipts, websites | A chat with your message already typed, ready to send |
 | Opt-in link | Building a list of people who agreed to hear from you | A consent screen inside WhatsApp, then your thank-you message |
-| Conversation starters | Helping a new customer start | Tappable suggestions and `/commands` in an empty chat |
+| Conversation starters | Helping a new customer start | Tappable suggestions and `/commands` in an empty chat, and an optional welcome reply |
 
 ## QR codes and short links
 
@@ -36,6 +36,10 @@ curl -X POST https://lazyapp.in/v1/connections/{uuid}/qr-codes \
 - Opening a link with a typed message hides your ice breakers for that chat.
 
 ## Opt-in links (In-App Signup)
+
+<Info>
+  **Available once Meta approves your account.** Meta switches opt-in links on per business and does not offer them in some markets (see below). See [feature status](/concepts/capabilities#feature-status).
+</Info>
 
 An opt-in link is `wa.me/{your number}/signup/{id}`. WhatsApp shows the person your invitation; when they agree, they get your thank-you message, optionally with a promo code. Use it to collect marketing consent inside WhatsApp itself.
 
@@ -85,6 +89,44 @@ curl -X PUT https://lazyapp.in/v1/connections/{uuid}/conversation-starters \
 The `PUT` replaces everything, so send empty arrays to clear. A tapped ice breaker or command arrives as an ordinary inbound message, so your inbox, automations and [`message.received`](/webhooks/events) webhook handle it like any other.
 
 To see ice breakers yourself, delete your existing chat with the number first; WhatsApp only shows them in a new chat.
+
+## Welcome reply
+
+The first moment someone opens a chat with you is a good time to say hello and point them somewhere useful. WhatsApp tells your number when that happens, before the person has typed anything, as long as `welcome_message` is on. A welcome reply answers that moment for you, with no automation to build.
+
+In the console, turn on **Greet people who open a chat for the first time** on the conversation starters card, write the message and add up to 3 reply buttons. Over the API, send `welcome_reply` with the starters:
+
+```bash
+curl -X PUT https://lazyapp.in/v1/connections/{uuid}/conversation-starters \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ice_breakers": ["Track my order"],
+    "commands": [],
+    "welcome_message": true,
+    "welcome_reply": {
+      "enabled": true,
+      "body": "Hi! Thanks for reaching Acme. What can we help with?",
+      "buttons": ["Track an order", "Talk to a person"]
+    }
+  }'
+```
+
+| Field | Rules |
+| --- | --- |
+| `enabled` | Required whenever you send `welcome_reply`. Turning it on also keeps `welcome_message` on, because WhatsApp only reports a new chat while that is on. |
+| `body` | Up to 1,024 characters. Required when `enabled` is `true`. |
+| `buttons` | Up to 3 reply buttons, 20 characters each, all different. A tap arrives as an ordinary reply with the id `welcome_1`, `welcome_2` or `welcome_3`, so an automation can act on it. |
+
+`welcome_reply` is optional. Leave it out and the current one stays as it is, so older integrations keep working. `GET …/conversation-starters` returns it.
+
+The welcome reply never doubles up with something else that greets the person. It stays quiet when:
+
+- an automation already handled the new chat: a **Customer sends a message** or **Conversation opens** trigger, or a step waiting for a reply;
+- the [platform](/platform/overview) your workspace belongs to sends its own replies;
+- it has already greeted this chat, even if WhatsApp reports the same chat twice.
+
+The AI assistant does not answer this moment either. If you would rather greet people with your own automation, choose **Let my automation greet them instead**: `welcome_message` stays on and no built-in reply is sent.
 
 ## Related
 

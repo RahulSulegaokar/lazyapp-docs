@@ -3,7 +3,7 @@ title: "Broadcasts"
 description: "Template sends to many contacts, with compliance built in."
 ---
 
-A broadcast sends one approved **marketing** template to a saved segment or an explicit list of phone numbers. LazyApp creates the campaign, resolves the audience, paces sends to your number's Meta messaging tier, and tracks delivery through to read receipts.
+A broadcast sends one approved **marketing** template to a saved segment or an explicit list of phone numbers. LazyApp creates the campaign, resolves the audience, paces sends to Meta's limits, and tracks delivery through to read receipts.
 
 <Note>
 Broadcasts in live mode count against your plan's monthly sends: 2,000 on Starter, 15,000 on Growth and 1,00,000 (fair use) on Pro. Test mode is never limited. See [Monthly broadcast sends](#monthly-broadcast-sends) and [Plans and limits](/billing/pricing-and-tiers#feature-gating).
@@ -195,8 +195,8 @@ This is deliberate. A broadcast created on Monday and sent on Friday respects th
   <Card title="Quiet hours" icon="moon">
     Sending pauses during quiet hours in the contact's timezone and resumes after.
   </Card>
-  <Card title="Messaging limits" icon="gauge">
-    Sends are paced to your number's Meta messaging tier rather than being rejected in bulk.
+  <Card title="Meta's limits" icon="gauge">
+    Sends are [paced](#pacing) to what Meta allows rather than being rejected in bulk.
   </Card>
 </CardGroup>
 
@@ -225,6 +225,21 @@ Excluded recipients are stored with a reason code (visible in the console). Comm
 | `quiet_hours` | Send time falls in configured quiet hours |
 | `country_excluded` | Country filter on the campaign (console) |
 | `marketing_limit` | Per-contact daily marketing cap reached |
+| `meta_marketing_limit` | Meta refused a marketing message to this person with error `131049` in the last 24 hours |
+
+## Pacing
+
+Meta limits how fast and how much a business can send, and refuses what goes over. A refused message is wasted, and a pile of them can hurt your number's quality. So a broadcast slows down or stops by itself when Meta's limits say so. The campaign page in the console says in plain words when this happens and why. There is nothing to do for the first three cases.
+
+| On the campaign page | Why | What LazyApp does |
+| --- | --- | --- |
+| **Sending at your number's top speed** | The number is at its messages-per-second limit (80 for most numbers, 1,000 for upgraded ones, 20 if it is also on the WhatsApp Business app) | Spaces the messages out. The campaign carries on |
+| **Meta is holding some messages** | Meta is checking how people react to a new or lower-rated template before it delivers the rest (`held_for_quality_assessment`) | Stops adding to the hold and checks again every 10 minutes. Meta usually releases held messages within an hour |
+| **N contacts reached Meta's marketing limit** | Meta limits how many marketing messages one person gets from all businesses | Skips anyone Meta refused with `131049` in the last 24 hours, because retrying sooner keeps them blocked longer. They are listed as `meta_marketing_limit` |
+| **Meta paused this template** | People blocked or reported messages from this template, and Meta paused it (`132015`) | Pauses the campaign. Edit the template or choose another, then resume |
+| **Meta is reviewing your account** | Meta saw people react badly to recent messages and is reviewing the business portfolio (`135000`). No templates can be sent until it ends | Pauses the campaign. Resume it once Meta finishes the review |
+
+A campaign Meta paused shows this on the campaign page only. No email or webhook is sent for it, so check the page if a broadcast stops early.
 
 ## Recording consent from your own opt-in flow
 
@@ -274,7 +289,7 @@ The send limit is what your plan includes. The messages themselves are billed by
 | `running` | Sends in progress |
 | `completed` | All recipients processed |
 | `failed` | Stopped with an error (for example template missing) |
-| `paused` | Paused from the console, or because the month's [broadcast sends](#monthly-broadcast-sends) ran out. Start it again to resume |
+| `paused` | Paused from the console, because the month's [broadcast sends](#monthly-broadcast-sends) ran out, or because Meta paused the template or is reviewing the account (see [Pacing](#pacing)). Start it again to resume |
 | `stopped` | Stopped from the console |
 
 Webhook events:

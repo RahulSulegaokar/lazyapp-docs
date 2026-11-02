@@ -257,6 +257,16 @@ Attach up to 20 string values. They come back on webhooks, which makes reconcili
 { "metadata": { "order_id": "1042", "warehouse": "BOM-1" } }
 ```
 
+### Meta's tracking string
+
+If your system already uses Meta's `biz_opaque_callback_data`, send it here too: one string of up to 512 characters. LazyApp passes it to Meta with the message and stores it. It comes back on every status webhook for the message (`message.queued`, `message.sent`, `message.delivered`, `message.read`, `message.failed`) and on [`GET /v1/messages/{uuid}`](/api-reference/messages/retrieve-a-message).
+
+```json
+{ "type": "text", "to": "+919812345670", "body": "Your order shipped", "biz_opaque_callback_data": "order-1042:shipping" }
+```
+
+It works on `POST /v1/messages` (scheduled sends too), [`POST /v1/messages/direct-send`](/sending/direct-send) and the [Meta-compatible API](/migrating/from-cloud-api). Prefer `metadata` for new code: it holds up to 20 named values instead of one string.
+
 ## Direct send
 
 Numbers enrolled in Meta's direct-send programme can send `utility` and `authentication` content without a pre-approved template, via [`POST /v1/messages/direct-send`](/api-reference/messages/send-without-an-approved-template). Marketing is not eligible. Check [capabilities](/concepts/capabilities) before relying on it. See [Direct Send](/sending/direct-send) for buttons, media headers and business-named templates.

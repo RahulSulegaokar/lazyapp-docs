@@ -50,9 +50,47 @@ Same body, same response shape, same error envelope. The version segment is acce
 | `/meta/whatsapp/{version}/{media}` | `GET`, `DELETE` |
 | `/meta/whatsapp/{version}/{phone_number_id}/whatsapp_business_profile` | `GET`, `POST` |
 | `/meta/whatsapp/{version}/{phone_number_id}/block_users` | `POST`, `DELETE` |
+| `/meta/whatsapp/{version}/{phone_number_id}/settings` | `GET`, `POST` (calling settings; [coming soon](/guides/calling)) |
+| `/meta/whatsapp/{version}/{phone_number_id}/calls` | `POST` ([coming soon](/guides/calling)) |
 | `/meta/whatsapp/{version}/{waba_id}/message_templates` | `GET`, `POST` |
 
 The proxy is a translation layer over the same services the native API uses, not a fork — so behaviour cannot drift between the two.
+
+A few details match Meta exactly, because Cloud API code depends on them:
+
+- **Sends** accept `biz_opaque_callback_data` (up to 512 characters). It comes back on LazyApp's status webhooks for the message.
+- **`message_status`** in a send's answer is `accepted`, or `held_for_quality_assessment` while Meta paces a template, as on Meta. Delivery states arrive by webhook.
+- **`GET …/{media}`** asks Meta and returns Meta's answer, including the download `url` (valid for about 5 minutes). It works for media a contact sent you as well as your own uploads, and takes Meta's optional `phone_number_id`.
+- **`GET …/settings?include_sip_credentials=true`** returns the SIP password, as on Meta. That needs a key with `messages:send`.
+
+## Errors
+
+A send Meta refuses answers with Meta's own error body and Meta's HTTP status (for example `400`), not `200`. Error handling written for the Cloud API keeps working, including checks on `code` and `error_subcode`:
+
+```json
+{
+  "error": {
+    "message": "(#100) Invalid parameter",
+    "type": "OAuthException",
+    "code": 100,
+    "error_data": { "messaging_product": "whatsapp", "details": "Parameter value is not valid" },
+    "fbtrace_id": "AXsgnV2Cm3ZMGF3dF_cfYIn"
+  }
+}
+```
+
+LazyApp also refuses some sends before they reach Meta, for example when the 24-hour window is closed or the contact opted out of marketing. Those come back in the same shape, under the Meta code your client already handles for that situation, with `lazyapp_code` added for the exact reason:
+
+| `code` | `lazyapp_code` | Why |
+| --- | --- | --- |
+| `131047` | `customer_service_window_closed` | More than 24 hours since the contact last wrote |
+| `131050` | `marketing_opt_out` | The contact opted out of marketing |
+| `131056` | `recipient_rate_limit` | Too many messages to this person in a short time |
+| `130429` | `send_burst_limit` | The number is sending faster than WhatsApp allows |
+| `137000` | `identity_changed` | The contact's WhatsApp identity changed since you last talked |
+| `131042` | `insufficient_credits`, `service_credits_exhausted`, `plan_message_allowance_exhausted` | A wallet or allowance that pays for the message is empty |
+
+Any other LazyApp refusal uses `131009`. If Meta cannot be reached at all, the answer is `503` with `131016`.
 
 ## Webhooks change shape
 

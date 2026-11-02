@@ -167,9 +167,9 @@ Upload first ([Media](/sending/media)), then send:
 }
 ```
 
-LazyApp's upload ceiling is **16 MB** per file by default (`MEDIA_MAX_SIZE_KB`). Meta may still refuse a type or size WhatsApp does not accept for that message kind. Do not invent per-type caps beyond what Meta documents for Cloud API.
+Uploads follow Meta's limit for each kind of file: images 5 MB, video and audio 16 MB, documents 100 MB, and stickers 100 KB (500 KB animated). A file over its limit is refused straight away with a plain sentence. See [Media](/sending/media#supported-formats-and-sizes).
 
-Audio sends as a normal audio attachment on `POST /v1/messages`. True **voice-note UI** (waveform) is available from the **console inbox** composer; the public JSON body does not accept a `voice` / `voiceNote` flag today. The Meta-compat proxy can pass Meta's `audio.voice` when you use that path.
+An audio file you attach in the inbox is sent as an ordinary audio message. To send a **voice note** (the waveform bubble), use `POST /v1/messages` with `type: audio` and `"voice": true`, with an OGG file using the Opus codec. The inbox composer has no voice recorder yet.
 
 ### Interactive and commerce
 

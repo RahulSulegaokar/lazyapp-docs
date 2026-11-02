@@ -10,7 +10,7 @@ Every API key carries scopes. A call outside them returns `403`.
 | `messages:send` | Send messages, create and update contacts, send events, trigger workflows, start broadcasts |
 | `messages:read` | Read messages, contacts, conversations, workflows, broadcasts, capabilities, scheduled messages |
 | `templates:read` | List and read templates and event-to-template mappings |
-| `templates:write` | Create, sync and delete templates; provision event mappings and automation packs |
+| `templates:write` | Create, edit, sync, archive and delete templates; provision event mappings and automation packs |
 | `media:write` | Upload and delete media |
 | `webhooks:write` | Manage webhook endpoints and read deliveries |
 | `flows:write` | Manage WhatsApp Flows and read their responses |
@@ -18,7 +18,7 @@ Every API key carries scopes. A call outside them returns `403`.
 | `customers:act` | Act on behalf of a platform customer without managing them |
 | `billing:read` | Read billing and usage, pricing facts and volume tiers |
 | `billing:write` | Change a WhatsApp account's billing currency |
-| `connections:write` | Change WhatsApp numbers and their account: register, two-step PIN, display name, blue tick, QR codes, conversation starters, opt-in links, adding numbers |
+| `connections:write` | Change WhatsApp numbers and their account: register, two-step PIN, display name, username, blue tick, QR codes, conversation starters and welcome reply, opt-in links, webhook subscription, adding numbers |
 | `payments:write` | Manage payment setups and gateway accounts, and refund payments |
 | `catalog:write` | Add, change and remove products in the connection's Meta catalog |
 
@@ -33,7 +33,8 @@ Every API key carries scopes. A call outside them returns `403`.
 | Broadcasts | `messages:read` | `messages:send` |
 | Workflows | `messages:read` | `messages:send` |
 | Capabilities | `messages:read` | — |
-| Connections (numbers, health, blue tick, QR codes, opt-in links) | `messages:read` | `connections:write` |
+| Connections (numbers, health, username, blue tick, QR codes, opt-in links, webhook subscription) | `messages:read` | `connections:write` |
+| Calling settings, including the SIP password | `messages:read` | `messages:send` |
 | Connections (business profile text, blocked users) | `messages:read` | `messages:send` |
 | Templates | `templates:read` | `templates:write` |
 | Event mappings / automation packs | `templates:read` | `templates:write` |
@@ -46,7 +47,7 @@ Every API key carries scopes. A call outside them returns `403`.
 | Payments — requests, status, lookup | `messages:read` | `messages:send` |
 | Payments — setups, gateway accounts, refunds | `messages:read` (list setups) | `payments:write` |
 | Payment templates | — | `templates:write` |
-| Shop settings | `messages:read` | `messages:send` |
+| Shop settings, catalog link messages | `messages:read` | `messages:send` |
 | Catalog products and changes | `messages:read` | `catalog:write` |
 | Pricing and currency change | `billing:read` | `billing:write` |
 | WhatsApp analytics | `messages:read` | `templates:write` (template insights) |

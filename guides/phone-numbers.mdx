@@ -121,6 +121,51 @@ This answers `202`: Meta reviews the name, and customers keep seeing the old one
 
 The profile photo, about text, address, email, websites and category live on the [business profile](/api-reference/connections/retrieve-business-profile); upload a photo with `POST …/business-profile/photo` (JPG or PNG, at least 192 × 192 pixels, up to 5 MB).
 
+## Business username
+
+WhatsApp is adding usernames, so people can find and message a business by a name such as `acme.store` instead of its phone number. In the console it is the **WhatsApp username** card under **Name & verification**; over the API:
+
+```bash
+curl https://lazyapp.in/v1/connections/{uuid}/username \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+```json
+{
+  "connection_uuid": "6f1c2b0e-8d3a-4c55-9e0f-2a1b3c4d5e6f",
+  "username": null,
+  "status": null,
+  "suggestions": ["acme.store", "acmeretail"]
+}
+```
+
+`suggestions` are names Meta has set aside for this number and is likely to approve. To claim one:
+
+```bash
+curl -X PUT https://lazyapp.in/v1/connections/{uuid}/username \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"username": "acme.store"}'
+```
+
+Meta answers with a `status`:
+
+| `status` | Meaning |
+| --- | --- |
+| `approved` | Customers can see the username now. |
+| `reserved` | The name is yours. Customers see it once Meta turns usernames on for them. |
+
+A number can change its username only **twice in 14 days**, and deleting does not reset that. So LazyApp checks Meta's rules before it asks Meta, and a name Meta would refuse never uses up a change:
+
+- 3 to 35 characters: English letters, numbers, dots (`.`) and underscores (`_`), with at least one letter.
+- No dot at the start or end, and no two dots in a row.
+- Not starting with `www.`, and not ending like a web address or file, such as `.com` or `.html`.
+- Case does not matter; dots and underscores do.
+
+If another number in your business portfolio already uses the name, send `"move_from_other_number": true` to move it to this number. Meta's refusals come back [in the usual shape](#when-meta-refuses), in plain words: the name is taken (`147001`), the number cannot have a username yet (`147002`), a Facebook Page (`147003`) or Instagram account (`147004`) uses it, another number in your business uses it (`147005`), or too many changes (`130429`).
+
+`DELETE …/username` removes it, and customers see the phone number again. When Meta changes or revokes a username, you get [`account.updated`](/webhooks/events#account-updated) with `field: business_username_updates`.
+
 ## The blue tick (Official Business Account)
 
 A blue tick shows customers you are the real business and lets people find you in WhatsApp search. Meta decides; you apply.
@@ -155,7 +200,50 @@ Embedded Signup returns one number, but a WhatsApp account can hold several. [`G
 
 New portfolios can register 2 numbers; Meta raises that to 20 once the business is verified or reaches the 2,000 limit.
 
+### All the WhatsApp accounts your business owns
+
+A business portfolio can own several WhatsApp Business accounts, for example one per brand or country. [`GET …/account/owned-accounts`](/api-reference/connections/list-owned-whatsapp-accounts) lists them, with the one this number is on marked `is_this_account`. In the console it is **Your WhatsApp Business accounts** under **Advanced**.
+
+Each account, here and on `GET …/account`, carries `service_pricing_policy`: how Meta charges it for service messages, the replies you send inside a customer's 24-hour window.
+
+| `service_pricing_policy` | Shown in the console as |
+| --- | --- |
+| `REGULAR` | Service messages: Standard pricing |
+| `PAID_EXEMPT` | Service messages free |
+| `null` | Meta did not report it for this account |
+
 `PATCH …/account` renames the account (only you see the name, in WhatsApp Manager) or sets its time zone with Meta's numeric `timezone_id` (for example `71` is `Asia/Kolkata`). Meta does not allow a time zone change once a partner credit line pays for the account.
+
+## Receiving messages
+
+Meta sends a WhatsApp account's incoming messages and delivery receipts only to the apps subscribed to it. If LazyApp's app is removed from the account, messages stop arriving in LazyApp even though sending still works. Check the subscription when replies seem to go missing:
+
+```bash
+curl https://lazyapp.in/v1/connections/{uuid}/webhook-subscription \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+```json
+{
+  "connection_uuid": "6f1c2b0e-8d3a-4c55-9e0f-2a1b3c4d5e6f",
+  "status": "subscribed",
+  "error": null,
+  "checked_at": "2026-11-03T09:12:00+00:00",
+  "receiving": true,
+  "apps": [
+    { "id": "1234567890", "name": "LazyApp", "override_callback_uri": null, "is_this_app": true }
+  ]
+}
+```
+
+`receiving` is what Meta lists right now. `apps` shows every app that gets this account's messages; `override_callback_uri` is set when that app sends them to its own URL.
+
+| Call | What it does |
+| --- | --- |
+| `POST …/webhook-subscription` | Turns LazyApp's subscription back on. If LazyApp is already listed it sends nothing to Meta, so another app's settings are left alone. `changed` says whether anything was sent |
+| `DELETE …/webhook-subscription` | Stops Meta sending this account's messages to LazyApp. **Every number on the account stops receiving in LazyApp** until you turn it back on. `status` becomes `unsubscribed` |
+
+LazyApp refuses the `DELETE` when the number's access token belongs to another Meta app, because the call would unsubscribe that app instead. In the console, the **Receiving messages** card under **Advanced** has **Check again**, **Turn back on** and **Stop receiving**.
 
 ## When Meta refuses
 

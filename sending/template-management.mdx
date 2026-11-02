@@ -67,9 +67,50 @@ curl "https://lazyapp.in/v1/templates/order_shipped/compare?compare_with=order_s
 
 The answer lists sends, which template has the lower block rate, and the most common reason people blocked each one.
 
+## Edit a template
+
+Fix a typo or improve the wording without starting again. Editing keeps the template's name, language and history, and Meta reviews the change. An approved template keeps sending its approved version while the edit is reviewed.
+
+```bash
+curl -X PUT https://lazyapp.in/v1/templates/order_shipped \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "body_text": "Hi {{1}}, your order {{2}} has shipped and arrives tomorrow.",
+    "body_examples": ["Asha", "1042"],
+    "footer_text": "Reply STOP to opt out"
+  }'
+```
+
+The body is the same as [creating a template](/sending/templates#create-a-template), and it **replaces the whole template**: send the header, footer and buttons you want to keep, because anything you leave out is removed. Some rules come from Meta:
+
+- `name` and `language` cannot change. Meta identifies a template by them.
+- `category` can change only while the template is a draft or rejected.
+- An approved template can be edited once a day and 10 times in 30 days. Past that, the answer is `422` with `code: template_edit_limit`.
+- Templates Direct Send created cannot be edited (`code: template_not_editable`).
+
+Pass `"submit": false` to save the change in LazyApp without sending it to Meta yet. If Meta refuses an edit, the template stays as Meta last approved it.
+
 ## Archive, unarchive and delete
 
-Archiving hides a template you no longer use without deleting it, and Meta keeps it. Select templates on the Templates page and use **Archive**, **Unarchive** or **Delete**. Meta deletes in bulk too, so a large clean-up is one action.
+Archiving takes a template you no longer use out of the way. An archived template cannot be sent and does not count towards your account's template limit. **Meta deletes it after 28 days** unless you unarchive it, and unarchiving brings back its earlier status. Meta archives only approved or rejected templates.
+
+Select templates on the Templates page and use **Archive**, **Unarchive** or **Delete**, or use the API. Each call takes up to 100 templates, named by uuid or name in `templates`, or by Meta's template id in `hsm_ids`:
+
+```bash
+curl -X POST https://lazyapp.in/v1/templates/archive \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "templates": ["summer_sale_2025", "diwali_offer_2025"] }'
+```
+
+```json
+{ "archived": 2, "failed": {} }
+```
+
+`POST /v1/templates/unarchive` works the same way. Meta can refuse some templates and accept the rest; `failed` lists each refused template with Meta's reason.
+
+`POST /v1/templates/bulk-delete` deletes up to 100 templates in one call. Meta deletes all of them or none, and the answer is `{ "deleted": 2 }`.
 
 You cannot reuse an approved template's name for 30 days after deleting it. If someone deletes a template in WhatsApp Manager instead, the next sync marks it deleted here and sends `template.deleted`.
 

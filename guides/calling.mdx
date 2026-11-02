@@ -6,7 +6,7 @@ description: "WhatsApp voice calls: answer and place calls in the inbox, or buil
 WhatsApp Business Calling lets customers call your business number from the chat, and lets you call customers who have said you may. LazyApp handles the **signalling**: it relays the call setup to Meta, keeps call history, records and transcribes calls when you ask, and sends [`call.*` webhooks](/webhooks/events#calls). The audio itself runs in a browser or on your own WebRTC or SIP system, never through LazyApp.
 
 <Warning>
-Calling has to be switched on by Meta for each number. It needs a messaging limit of at least 2,000 customers a day, and LazyApp's own Meta app needs calling approval. Until then, [`GET /v1/capabilities`](/concepts/capabilities) reports `calling: false` and the call endpoints answer `422` with `code: capability_unavailable`.
+**Coming soon.** Calling is built and follows Meta's current calling docs, but Meta has not yet approved calling for LazyApp's own Meta app, so no number can use it yet. When Meta approves it, calling switches on with no change on your side. Until then, [`GET /v1/capabilities`](/concepts/capabilities) reports `calling: false` and the call endpoints answer `422` with `code: capability_unavailable`. Meta also requires each number to have a messaging limit of at least 2,000 customers a day. See [feature status](/concepts/capabilities#feature-status).
 </Warning>
 
 ## Two ways to take calls
@@ -22,6 +22,10 @@ Calling has to be switched on by Meta for each number. It needs a messaging limi
 While the inbox is open, an incoming call rings in the corner with **Answer** and **Decline**. To call someone, open their chat and click the phone button. If they have not allowed calls yet, LazyApp offers to send them a permission request first. You can switch on **Record and transcribe** before answering or calling.
 
 The browser asks for microphone access the first time.
+
+#### Why calls need a TURN server
+
+Call audio travels directly between the agent's browser and Meta. Many office and mobile networks block that direct path. A TURN server relays the audio around the block, so the call still has sound. Before every call, the inbox asks LazyApp for short-lived TURN login details, which expire on their own; the shared secret behind them never reaches the browser. If no TURN server is set up, the call card says plainly that calls may have no sound on some networks.
 
 ## Settings
 
@@ -40,7 +44,7 @@ curl -X PATCH https://lazyapp.in/v1/connections/$CONNECTION_UUID/calling-setting
   }'
 ```
 
-`calling` takes Meta's own fields: `status`, `call_icon_visibility`, `call_icons.restrict_to_user_countries`, `callback_permission_status`, `call_hours`, `audio.additional_codecs` (`PCMA`, `PCMU`), `srtp_key_exchange_protocol` (`DTLS` or `SDES`), `voicemail` and `sip`. SIP passwords are never returned.
+`calling` takes Meta's own fields: `status`, `call_icon_visibility`, `call_icons.restrict_to_user_countries`, `callback_permission_status`, `call_hours`, `audio.additional_codecs` (`PCMA`, `PCMU`), `srtp_key_exchange_protocol` (`DTLS` or `SDES`), `voicemail` and `sip`. The settings never include the SIP password; read it [separately](#your-own-phone-system-sip).
 
 <Note>
 The inbox softphone needs `DTLS`, the default. Choose `SDES` only for a SIP server.
@@ -48,7 +52,43 @@ The inbox softphone needs `DTLS`, the default. Choose `SDES` only for a SIP serv
 
 ### Voicemail
 
-With voicemail on, a call you decline, or that rings for `timeout_seconds` (5–60), is answered by WhatsApp, which plays your greeting and records a message. The recording arrives as an ordinary inbound voice note with `content.voicemail.call_id`. Upload the greeting (OGG/Opus, under 60 seconds) in the calling settings. Turn call hours off to use voicemail: customers cannot ring outside call hours.
+With voicemail on, a call you decline, or that rings for `timeout_seconds` (0 to 30 seconds, Meta's range), is answered by WhatsApp, which plays your greeting and records a message. The recording arrives as an ordinary inbound voice note with `content.voicemail.call_id`. Upload the greeting (OGG/Opus, under 60 seconds) in the calling settings. Turn call hours off to use voicemail: customers cannot ring outside call hours.
+
+### Your own phone system (SIP)
+
+If you already run a phone system or contact centre, connect it over SIP instead of using the inbox. WhatsApp then sends calls to your SIP server, and your agents answer them there. In the console this is **Use your own phone system (SIP)** in the calling settings.
+
+```json
+{
+  "calling": {
+    "sip": {
+      "status": "ENABLED",
+      "servers": [ { "hostname": "sip.acme.example", "port": 5061 } ]
+    },
+    "srtp_key_exchange_protocol": "SDES",
+    "audio": { "additional_codecs": ["PCMA", "PCMU"] }
+  }
+}
+```
+
+- Meta takes **one SIP server per number**. An empty `servers` list removes it.
+- `port` defaults to 5061, SIP over TLS.
+- `audio.additional_codecs` adds G.711 (`PCMA`, `PCMU`) for phone systems that need it.
+- `srtp_key_exchange_protocol` sets how the call is encrypted: `DTLS` or `SDES`.
+- `webhook_delivery` turns on Meta's SIP call webhooks. It is off unless you ask.
+
+Meta generates a password for your SIP server to check each call. Read it when you set up the server:
+
+```bash
+curl -X POST https://lazyapp.in/v1/connections/$CONNECTION_UUID/calling-settings/sip-password \
+  -H "Authorization: Bearer $LAZYAPP_API_KEY"
+```
+
+```json
+{ "connection_uuid": "…", "sip_hostname": "sip.acme.example", "sip_username": "…", "sip_user_password": "…" }
+```
+
+It needs the `messages:send` scope, every read is recorded in the workspace audit log, and the answer is never cached. Before SIP is on with a server, the answer is `404` with `code: sip_not_configured`. In the console, people who can manage numbers see it under the calling settings. On the [Meta-compatible API](/migrating/from-cloud-api), `GET …/settings?include_sip_credentials=true` returns it as Meta does.
 
 ### Call link
 
@@ -75,7 +115,12 @@ curl "https://lazyapp.in/v1/calls/permissions?to=%2B919812345670" \
 
 `to` can also be a business-scoped user id. `actions` is Meta's detail, including how many requests and calls you have left.
 
-If `can_call` is false, ask:
+If `can_call` is false, ask. How the request goes out depends on the 24-hour customer service window:
+
+- **Inside the window** (the person messaged you in the last 24 hours), it is an interactive message with your `body`.
+- **Outside it**, WhatsApp accepts the request only as an approved template with **Ask permission to call** ticked and nothing to fill in. Name one with `template` and `template_language`, or LazyApp uses the oldest one that fits. With none, the answer is `422` with `code: call_permission_template_required` and a sentence that says what to create.
+
+The response's `sent_as` is `interactive` or `template`.
 
 ```bash
 curl -X POST https://lazyapp.in/v1/calls \
@@ -151,7 +196,9 @@ Download the audio from `GET /v1/calls/{uuid}/recording`. It answers `409` with 
 
 ## Pricing
 
-Customer-initiated calls are free. Business-initiated calls are charged by Meta per six-second pulse, by the country called, with volume tiers. Meta bills them to your own Meta payment method, and LazyApp adds 0%. A call permission request is an ordinary message.
+Customer-initiated calls are free, and so are calls nobody answered. Business-initiated calls that connect are charged by Meta per six-second pulse (a part pulse counts as a whole one), at the per-minute rate of the country called, with volume tiers based on the minutes called that month. Meta bills them to your own Meta payment method, and LazyApp adds 0%. A call permission request is an ordinary message.
+
+LazyApp records each connected business-initiated call with its billed seconds. Meta's call webhooks carry no price, so **Analytics → What WhatsApp counted** compares LazyApp's record with Meta's own daily count and cost of calls, and [`metric=calls`](/guides/whatsapp-analytics) returns Meta's numbers.
 
 ## Related
 

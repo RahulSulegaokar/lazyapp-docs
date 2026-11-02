@@ -3,6 +3,46 @@ title: "Changelog"
 description: "What shipped, newest first."
 ---
 
+<Update label="2026-11-03" description="v1">
+
+**In step with Meta's current WhatsApp docs (Graph API v26.0).** Sending, media, templates, Flows, numbers, webhooks, calling and groups were checked against Meta's live docs.
+
+**Sending and media**
+
+- `biz_opaque_callback_data` (up to 512 characters) on `POST /v1/messages`, `POST /v1/messages/direct-send` and the Meta-compatible send. It comes back on every message status webhook and on `GET /v1/messages/{uuid}`. See [Messages](/sending/messages#metas-tracking-string).
+- Uploads follow Meta's limit for each kind: images 5 MB, video and audio 16 MB, documents 100 MB, stickers 100 KB (500 KB animated), with a plain-words refusal. See [Media](/sending/media#supported-formats-and-sizes).
+- `GET /v1/media/{media}` adds `url`, Meta's short-lived download link.
+- Every send is paced to Meta's per-number speed and per-person rate. Broadcasts wait out Meta's holds, pause when Meta pauses the template or reviews the account, and skip people at Meta's marketing limit; the campaign page says why. See [Rate limits](/reference/rate-limits#metas-per-number-speed) and [Broadcasts](/sending/broadcasts#pacing).
+- More of Meta's error codes are explained in plain words in the console. See [Errors](/concepts/errors#metas-error-codes-in-plain-words).
+- The Meta-compatible API returns Meta's real error body and HTTP status for a refused send, and `message_status` as Meta does. `GET …/{media}` returns Meta's download `url`. See [Migrating from Meta's Cloud API](/migrating/from-cloud-api#errors).
+- `POST /v1/catalog/link-messages` sends your catalog as a link message, and `GET /v1/catalog/products` takes `search`. See [Catalog](/sending/catalog#catalog-links).
+
+**Templates and Flows**
+
+- `PUT /v1/templates/{template}` edits a template. `POST /v1/templates/archive`, `/unarchive` and `/bulk-delete` take up to 100 templates. `GET /v1/templates/{template}?refresh=true` reads one live from Meta. See [Managing templates](/sending/template-management#edit-a-template).
+- Flow buttons name their flow by `flow_id`, `flow_name` or `flow_json`, with `flow_action` and `navigate_screen`; sends take `template.features.flow`. See [Templates](/sending/templates#flow-buttons).
+- The console's visual Flow builder covers every Flow JSON 7.3 component. New flows use 7.3, and frozen versions are refused before upload. `POST /v1/flows/sync` and `GET /v1/flows/{flow}/assets` bring in flows made elsewhere. See [Flows](/guides/flows#build-a-flow-in-the-console).
+- `metric=templates` reads Marketing Messages sends too, tagged with `product_type`. See [WhatsApp analytics](/guides/whatsapp-analytics#marketing-messages-results).
+
+**Numbers and webhooks**
+
+- Business usernames: `GET`, `PUT` and `DELETE /v1/connections/{uuid}/username`. See [Phone numbers](/guides/phone-numbers#business-username).
+- `GET /v1/connections/{uuid}/account/owned-accounts`, and `service_pricing_policy` on accounts.
+- `GET`, `POST` and `DELETE /v1/connections/{uuid}/webhook-subscription`. See [Receiving messages](/guides/phone-numbers#receiving-messages).
+- A built-in welcome reply: `welcome_reply` on the conversation starters endpoints. See [Welcome reply](/guides/growth-tools#welcome-reply).
+- New Meta webhook fields handled: `business_username_updates`, `standby`, `messaging_handovers` and `account_settings_update`. See [What Meta tells LazyApp](/webhooks/whatsapp-fields).
+
+**Calling and groups**
+
+- Calling (coming soon): SIP setup with `POST /v1/connections/{uuid}/calling-settings/sip-password`, voicemail `timeout_seconds` of 0 to 30, permission requests by template outside the 24-hour window, and TURN for the inbox softphone. See [Calling](/guides/calling).
+- `metric=groups` takes one group, by `group` uuid or Meta id, for up to 90 days. See [Group analytics](/guides/whatsapp-analytics#group-analytics).
+
+**Removed**
+
+- `metric=conversation` on `GET /v1/analytics/whatsapp`. Meta stopped serving conversation analytics on 1 November 2026; it now answers `422`. Use `metric=pricing`.
+
+</Update>
+
 <Update label="2026-10-30" description="v1">
 
 **Claim your customers' replies.** Platform customers take `manages_customer_replies` on create and `PATCH`, and every customer object returns it. When it is `true`, LazyApp's AI reply assistant never replies on that customer's numbers, an assistant they had switched on is switched off, and the console locks the setting. Use it when your platform answers contacts with its own bot, so nobody gets two replies. See [Answer your customers' contacts yourself](/platform/overview#answer-your-customers-contacts-yourself).
